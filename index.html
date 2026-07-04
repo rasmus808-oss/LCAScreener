@@ -1,0 +1,2076 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Screening — Bygnings-LCA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --limestone:#EEEAE0;
+    --paper:#FAF8F3;
+    --charcoal:#211F1C;
+    --charcoal-soft:#5B564C;
+    --patina:#4C6B63;
+    --patina-dark:#374F49;
+    --patina-tint:#DCE5E1;
+    --slate:#5C7A8A;
+    --slate-tint:#DCE4E7;
+    --brick:#A8462E;
+    --brick-tint:#F3DFD8;
+    --straw:#B98A2E;
+    --straw-tint:#F1E4C6;
+    --line:#D9D3C4;
+    --line-soft:#E6E1D4;
+    --sans: 'Inter', sans-serif;
+    --display: 'Space Grotesk', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+    --radius: 3px;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--limestone);
+    color:var(--charcoal);
+    font-family:var(--sans);
+    font-size:14px;
+    line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--patina-dark);}
+
+  .app{max-width:1400px;margin:0 auto;padding:0 24px 64px;}
+
+  header.top{
+    display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
+    padding:28px 0 20px;border-bottom:1px solid var(--line);flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:baseline;gap:12px;}
+  .brand .mark{
+    width:34px;height:34px;border-radius:50%;
+    background:conic-gradient(from 220deg, var(--patina), var(--straw) 55%, var(--brick) 78%, var(--patina));
+    display:inline-flex;flex:0 0 auto;position:relative;top:2px;
+  }
+  .brand h1{font-family:var(--display);font-size:22px;font-weight:600;letter-spacing:-0.01em;margin:0;}
+  .brand .tagline{font-size:12px;color:var(--charcoal-soft);font-family:var(--mono);letter-spacing:0.01em;}
+
+  .project-name-field{display:flex;flex-direction:column;gap:4px;min-width:260px;}
+  .project-name-field label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--charcoal-soft);}
+  .project-name-field input{
+    font-family:var(--display);font-size:17px;font-weight:500;border:none;border-bottom:1.5px solid var(--charcoal);
+    background:transparent;padding:2px 0 4px;color:var(--charcoal);
+  }
+  .project-name-field input:focus{outline:none;border-color:var(--patina);}
+
+  .workbench{display:grid;grid-template-columns:300px 1fr 340px;gap:20px;margin-top:24px;align-items:start;}
+  @media (max-width: 1080px){.workbench{grid-template-columns:1fr;}}
+
+  .panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);}
+  .panel-head{
+    padding:14px 16px 12px;border-bottom:1px solid var(--line-soft);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .panel-head h2{
+    font-family:var(--display);font-size:13px;text-transform:uppercase;letter-spacing:0.07em;
+    font-weight:600;margin:0;color:var(--charcoal);
+  }
+  .panel-body{padding:16px;}
+
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--charcoal-soft);margin-bottom:5px;
+  }
+  .field .hint{font-size:11px;color:var(--charcoal-soft);margin-top:-6px;margin-bottom:14px;font-family:var(--sans);line-height:1.5;}
+  select, input[type=number], input[type=text]{
+    width:100%;font-family:var(--mono);font-size:13px;padding:8px 9px;
+    border:1px solid var(--line);border-radius:var(--radius);background:#fff;color:var(--charcoal);
+  }
+  select:focus, input:focus{outline:none;border-color:var(--patina);box-shadow:0 0 0 3px var(--patina-tint);}
+  input::placeholder{color:#B7B1A2;font-style:italic;}
+
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+
+  .radio-group{display:flex;flex-direction:column;gap:6px;}
+  .radio-option{
+    display:flex;align-items:center;gap:8px;font-size:12.5px;padding:7px 9px;
+    border:1px solid var(--line);border-radius:var(--radius);cursor:pointer;background:#fff;
+  }
+  .radio-option.active{border-color:var(--patina);background:var(--patina-tint);}
+  .radio-option input{width:auto;margin:0;}
+
+  .level-head{
+    display:flex;align-items:center;justify-content:space-between;
+    margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--line-soft);
+  }
+  .level-head.first{border-top:none;padding-top:0;margin-top:0;}
+  .level-head .level-title{
+    font-family:var(--display);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--charcoal-soft);font-weight:600;
+  }
+  .level-badge{
+    font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:0.03em;
+    padding:2px 7px;border-radius:10px;white-space:nowrap;
+  }
+  .level-badge.empty{background:var(--straw-tint);color:#7A5A18;}
+  .level-badge.filled{background:var(--patina-tint);color:var(--patina-dark);}
+
+  .discrepancy-warning{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;
+    background:var(--brick-tint);border:1px solid var(--brick);border-radius:var(--radius);
+    padding:8px 10px;margin:-6px 0 14px;font-size:11px;color:var(--brick);line-height:1.5;
+  }
+  .discrepancy-warning .discrepancy-btn{
+    font-family:var(--sans);font-size:10.5px;font-weight:600;padding:5px 10px;border-radius:var(--radius);
+    border:1px solid var(--brick);background:#fff;color:var(--brick);cursor:pointer;white-space:nowrap;
+  }
+  .discrepancy-warning .discrepancy-btn:hover{background:var(--brick);color:#fff;}
+
+  input.field-error{border-color:var(--brick) !important;background:#FBEFEA;}
+  input.field-error:focus{box-shadow:0 0 0 3px var(--brick-tint) !important;}
+
+  .table-scroll{overflow-x:auto;}
+  .worksheet-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px;}
+  .worksheet-table thead th{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--charcoal-soft);font-weight:600;padding:0 8px 8px;border-bottom:1px solid var(--line);
+  }
+  .worksheet-table tbody td{padding:6px 8px;border-bottom:1px solid var(--line-soft);vertical-align:middle;}
+  .worksheet-table tbody tr:hover{background:var(--line-soft);}
+  .worksheet-table input, .worksheet-table select{padding:6px 7px;font-size:12.5px;}
+  .col-name{min-width:190px;}
+  .col-qty{width:100px;}
+  .col-unit{width:48px;text-align:center;color:var(--charcoal-soft);font-family:var(--mono);}
+  .col-factor{width:70px;text-align:right;font-family:var(--mono);color:var(--charcoal-soft);}
+  .col-result{width:100px;text-align:right;font-family:var(--mono);font-weight:600;}
+  .col-prec{width:82px;}
+  .col-action{width:70px;text-align:center;}
+
+  .cat-label{font-family:var(--sans);font-weight:500;font-size:12.5px;margin-bottom:5px;}
+  .auto-qty{font-family:var(--mono);color:var(--charcoal-soft);font-style:italic;display:inline-block;padding:6px 0;}
+
+  .prec-badge{
+    display:inline-block;padding:2px 7px;border-radius:10px;font-size:9.5px;font-family:var(--sans);
+    font-weight:600;text-transform:uppercase;letter-spacing:0.03em;white-space:nowrap;
+  }
+  .prec-badge.assumed{background:var(--straw-tint);color:#7A5A18;}
+  .prec-badge.refined{background:var(--slate-tint);color:#2E4753;}
+  .prec-badge.manual{background:var(--patina-dark);color:#fff;}
+
+  .row-del-btn{
+    border:none;background:none;color:var(--charcoal-soft);cursor:pointer;
+    font-size:15px;line-height:1;padding:2px 6px;border-radius:var(--radius);
+  }
+  .row-del-btn:hover{color:var(--brick);background:var(--brick-tint);}
+  .row-action-btn{
+    border:1px solid var(--line);background:#fff;color:var(--charcoal-soft);cursor:pointer;
+    font-size:10.5px;padding:4px 8px;border-radius:var(--radius);font-family:var(--sans);
+  }
+  .row-action-btn:hover{border-color:var(--patina);color:var(--patina-dark);background:var(--patina-tint);}
+
+  .add-row-btn{
+    margin-top:12px;display:inline-flex;align-items:center;gap:7px;font-family:var(--sans);
+    font-size:12.5px;font-weight:500;padding:8px 13px;border:1px dashed var(--patina);
+    border-radius:var(--radius);background:var(--patina-tint);color:var(--patina-dark);cursor:pointer;
+  }
+  .add-row-btn:hover{background:var(--patina);color:#fff;}
+
+  .worksheet-footrow td{
+    padding:10px 8px 4px;font-family:var(--mono);font-weight:600;border-bottom:none;border-top:1.5px solid var(--charcoal);
+  }
+
+  .data-note{
+    margin-top:14px;font-size:11.5px;color:var(--charcoal-soft);background:var(--straw-tint);
+    border:1px solid var(--straw);border-radius:var(--radius);padding:9px 11px;line-height:1.5;
+  }
+  .data-note strong{color:var(--charcoal);}
+
+  .module-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px;}
+  .module-card{border:1px solid var(--line);border-radius:var(--radius);padding:11px 12px;background:#fff;}
+  .module-card .m-label{
+    font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:0.05em;
+    color:var(--patina-dark);font-weight:600;margin-bottom:6px;display:block;
+  }
+  .module-card .m-desc{font-size:11px;color:var(--charcoal-soft);margin-bottom:8px;}
+  .module-card .m-label-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
+  .module-card .m-label-row .m-label{margin-bottom:0;}
+  .module-input-row{display:flex;gap:8px;align-items:stretch;}
+  .module-input-row input{flex:1;}
+  .module-reset-btn{flex:0 0 auto;white-space:nowrap;display:none;}
+  .module-card input{padding:6px 8px;font-size:12.5px;}
+
+  .verdict{padding:16px;text-align:center;border-bottom:1px solid var(--line-soft);}
+  .verdict .figure{font-family:var(--mono);font-size:38px;font-weight:600;line-height:1;letter-spacing:-0.02em;}
+  .verdict .unit{font-family:var(--mono);font-size:12px;color:var(--charcoal-soft);margin-top:4px;}
+  .badge{
+    display:inline-block;margin-top:10px;padding:5px 12px;border-radius:20px;font-size:11px;
+    font-weight:600;letter-spacing:0.03em;text-transform:uppercase;font-family:var(--sans);
+  }
+  .badge.pass{background:var(--patina-tint);color:var(--patina-dark);}
+  .badge.warn{background:var(--straw-tint);color:#7A5A18;}
+  .badge.fail{background:var(--brick-tint);color:var(--brick);}
+
+  .sub-badge-row{
+    margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);
+    display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;
+  }
+  .sub-badge-label{font-family:var(--mono);font-size:10.5px;color:var(--charcoal-soft);}
+  .sub-badge-row .badge{margin-top:0;padding:3px 10px;font-size:10px;}
+
+  .precision-panel{padding:16px;border-bottom:1px solid var(--line-soft);}
+  .precision-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .precision-head h3{
+    font-family:var(--display);font-size:12px;text-transform:uppercase;letter-spacing:0.06em;
+    margin:0;color:var(--charcoal-soft);
+  }
+  .precision-score{font-family:var(--mono);font-size:16px;font-weight:700;}
+  .precision-bar{height:10px;border-radius:6px;overflow:hidden;display:flex;background:var(--line-soft);border:1px solid var(--line);}
+  .precision-bar .seg{height:100%;}
+
+  .carbon-bar-wrap{padding:16px;border-bottom:1px solid var(--line-soft);}
+  .carbon-bar-wrap h3{
+    font-family:var(--display);font-size:12px;text-transform:uppercase;letter-spacing:0.06em;
+    margin:0 0 10px;color:var(--charcoal-soft);
+  }
+  .carbon-bar{
+    position:relative;height:34px;border-radius:var(--radius);overflow:visible;
+    display:flex;background:var(--line-soft);border:1px solid var(--line);
+  }
+  .carbon-bar .seg{height:100%;transition:width 0.4s ease;}
+  .carbon-bar .threshold-line{position:absolute;top:-6px;bottom:-6px;width:2px;background:var(--charcoal);}
+  .carbon-bar .threshold-line::after{
+    content:attr(data-label);position:absolute;top:-18px;left:50%;transform:translateX(-50%);
+    font-family:var(--mono);font-size:10px;white-space:nowrap;color:var(--charcoal);
+  }
+  .legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:12px;font-size:10.5px;font-family:var(--mono);}
+  .legend .item{display:flex;align-items:center;gap:5px;color:var(--charcoal-soft);}
+  .legend .dot{width:9px;height:9px;border-radius:2px;flex:0 0 auto;}
+
+  .module-breakdown{padding:14px 16px;}
+  .calc-trail{
+    font-family:var(--mono);font-size:11px;line-height:1.9;color:var(--charcoal-soft);
+    background:var(--limestone);border:1px solid var(--line);border-radius:var(--radius);
+    padding:10px 11px;margin-bottom:14px;
+  }
+  .calc-trail .step{display:block;}
+  .calc-trail .step .op{color:var(--patina-dark);font-weight:600;padding:0 3px;}
+  .calc-trail .step .val{color:var(--charcoal);font-weight:600;}
+  .calc-trail .step.result{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);color:var(--charcoal);}
+
+  .mb-row{
+    display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;
+    border-bottom:1px solid var(--line-soft);font-size:12.5px;
+  }
+  .mb-row:last-child{border-bottom:none;}
+  .mb-row .mb-name{color:var(--charcoal-soft);}
+  .mb-row .mb-val{font-family:var(--mono);font-weight:600;}
+
+  footer.notes{
+    margin-top:28px;padding-top:18px;border-top:1px solid var(--line);
+    font-size:11.5px;color:var(--charcoal-soft);line-height:1.6;
+  }
+  footer.notes strong{color:var(--charcoal);}
+
+  .io-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:20px;}
+  @media (max-width: 1080px){.io-row{grid-template-columns:1fr;}}
+  .io-card-desc{font-size:12px;color:var(--charcoal-soft);margin-bottom:12px;line-height:1.5;}
+  .io-btn{
+    display:inline-flex;align-items:center;gap:7px;font-family:var(--sans);font-size:12.5px;font-weight:500;
+    padding:8px 13px;border:1px solid var(--patina);border-radius:var(--radius);background:#fff;
+    color:var(--patina-dark);cursor:pointer;width:100%;justify-content:center;margin-bottom:8px;
+  }
+  .io-btn:hover{background:var(--patina);color:#fff;}
+  .io-btn.ghost{border-style:dashed;background:var(--limestone);}
+  .io-btn.danger{border-color:var(--brick);color:var(--brick);}
+  .io-btn.danger:hover{background:var(--brick);color:#fff;}
+  input[type=file]{display:none;}
+
+  .status-line{
+    font-family:var(--mono);font-size:11px;padding:8px 9px;border-radius:var(--radius);
+    margin-top:8px;display:none;line-height:1.5;
+  }
+  .status-line.show{display:block;}
+  .status-line.ok{background:var(--patina-tint);color:var(--patina-dark);}
+  .status-line.error{background:var(--brick-tint);color:var(--brick);}
+  .status-line.info{background:var(--straw-tint);color:#7A5A18;}
+
+  .snapshot-list{display:flex;flex-direction:column;gap:6px;margin-top:10px;max-height:190px;overflow-y:auto;}
+  .snapshot-item{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;
+    border:1px solid var(--line);border-radius:var(--radius);background:#fff;font-size:12px;
+  }
+  .snapshot-item .sn-meta{overflow:hidden;}
+  .snapshot-item .sn-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+  .snapshot-item .sn-date{font-family:var(--mono);font-size:10px;color:var(--charcoal-soft);}
+  .snapshot-item .sn-actions{display:flex;gap:4px;flex:0 0 auto;}
+  .sn-actions button{
+    border:none;background:none;cursor:pointer;font-size:11px;padding:4px 7px;border-radius:var(--radius);
+    color:var(--charcoal-soft);font-family:var(--sans);
+  }
+  .sn-actions button.load-btn:hover{background:var(--patina-tint);color:var(--patina-dark);}
+  .sn-actions button.del-btn:hover{background:var(--brick-tint);color:var(--brick);}
+
+  .autosave-indicator{
+    font-family:var(--mono);font-size:10.5px;color:var(--charcoal-soft);margin-top:10px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .autosave-indicator .dot{width:6px;height:6px;border-radius:50%;background:var(--patina);flex:0 0 auto;}
+
+  optgroup{font-family:var(--sans);font-style:normal;font-weight:600;font-size:11px;color:var(--charcoal-soft);}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header class="top">
+    <div class="brand">
+      <span class="mark"></span>
+      <div>
+        <h1>Screening</h1>
+        <div class="tagline">bygnings-LCA · BR18 / BR25 metodik</div>
+      </div>
+    </div>
+    <div class="project-name-field">
+      <label for="projectName">Projektnavn</label>
+      <input id="projectName" type="text" value="Uden navn — nybyggeri" />
+    </div>
+  </header>
+
+  <div class="workbench">
+
+    <!-- ============ LEFT: PROGRESSIVE BUILDING GEOMETRY ============ -->
+    <div class="panel">
+      <div class="panel-head"><h2>Bygning</h2></div>
+      <div class="panel-body">
+
+        <div class="level-head first"><span class="level-title">Niveau 0 · Grundlag</span></div>
+
+        <div class="field">
+          <label for="buildingType">Bygningstype</label>
+          <select id="buildingType">
+            <option value="parcelhus">Parcel-/rækkehus</option>
+            <option value="etage">Etageboligbyggeri</option>
+            <option value="kontor">Kontor</option>
+            <option value="institution">Institution</option>
+            <option value="sommerhus">Sommerhus/fritidsbolig</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="heatedArea">Opvarmet areal (m²)</label>
+            <input id="heatedArea" type="number" value="150" min="1" />
+          </div>
+          <div class="field">
+            <label for="floors">Etager i alt</label>
+            <input id="floors" type="number" value="2" min="1" />
+          </div>
+        </div>
+        <div class="discrepancy-warning" id="heatedAreaWarning" style="display:none;">
+          <span class="discrepancy-text"></span>
+          <button class="discrepancy-btn" type="button"></button>
+        </div>
+
+        <div class="discrepancy-warning" id="floorsDiscrepancyWarning" style="display:none;">
+          <span class="discrepancy-text"></span>
+          <button class="discrepancy-btn" type="button"></button>
+        </div>
+
+        <div class="level-head">
+          <span class="level-title">Niveau 1 · Etager</span>
+          <span class="level-badge empty" id="level1Badge">Antaget</span>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="floorsAboveGrade">Over jord</label>
+            <input id="floorsAboveGrade" type="number" min="0" />
+          </div>
+          <div class="field">
+            <label for="floorsBelowGrade">Under jord</label>
+            <input id="floorsBelowGrade" type="number" min="0" />
+          </div>
+        </div>
+        <div class="level-head">
+          <span class="level-title">Niveau 2 · Facade</span>
+          <span class="level-badge empty" id="level2Badge">Antaget</span>
+        </div>
+        <div class="field">
+          <label for="constructionPrinciple">
+            Bærende system
+            <span class="level-badge empty" id="principleBadge" style="margin-left:6px;">Antaget</span>
+          </label>
+          <select id="constructionPrinciple">
+            <option value="">— Ikke angivet (antaget efter bygningstype) —</option>
+            <option value="vaeg" selected>Vægbærende</option>
+            <option value="skelet">Søjle-/bjælkesystem (skelet)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="facadeAreaOverride">Facadeareal (m²)</label>
+          <input id="facadeAreaOverride" type="number" min="0" />
+        </div>
+
+        <div class="discrepancy-warning" id="facadeDiscrepancyWarning" style="display:none;">
+          <span class="discrepancy-text"></span>
+          <button class="discrepancy-btn" type="button"></button>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="facadeLength">— eller længde (m)</label>
+            <input id="facadeLength" type="number" min="0" />
+          </div>
+          <div class="field">
+            <label for="facadeHeight">højde (m)</label>
+            <input id="facadeHeight" type="number" min="0" />
+          </div>
+        </div>
+        <div class="level-head">
+          <span class="level-title">Niveau 3 · Fundering</span>
+          <span class="level-badge empty" id="level3Badge">Antaget</span>
+        </div>
+        <div class="field">
+          <label for="foundationType">Funderingstype</label>
+          <select id="foundationType">
+            <option value="">— Ikke angivet (antager plade) —</option>
+            <option value="plade">Pladefundament</option>
+            <option value="stribe">Stribefundament</option>
+            <option value="punkt">Punktfundament</option>
+            <option value="pael">Pælefundament</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="foundationLength">Fundamentslængde (m)</label>
+          <input id="foundationLength" type="number" min="0" />
+        </div>
+        <div class="level-head">
+          <span class="level-title">Niveau 4 · Tag</span>
+          <span class="level-badge empty" id="level4Badge">Antaget</span>
+        </div>
+        <div class="field">
+          <label for="roofType">Tagtype</label>
+          <select id="roofType">
+            <option value="">— Ikke angivet (antager fladt) —</option>
+            <option value="flad">Fladt tag</option>
+            <option value="flad-udhaeng">Fladt tag med udhæng</option>
+            <option value="sadel">Saddeltag</option>
+            <option value="sadel-udhaeng">Saddeltag med udhæng</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="roofAreaOverride">Tagareal (m²)</label>
+          <input id="roofAreaOverride" type="number" min="0" />
+        </div>
+        <div class="level-head"><span class="level-title">Regelsæt</span></div>
+        <div class="field">
+          <label>Referenceperiode</label>
+          <input type="text" value="50 år (fast, jf. BR18/BR25)" disabled style="color:var(--charcoal-soft);background:var(--line-soft);" />
+        </div>
+        <div class="field">
+          <div class="radio-group" id="standardGroup">
+            <label class="radio-option" data-value="br18">
+              <input type="radio" name="standard" value="br18">
+              BR18 (2023) — 12,0 kg/m²/år, ens for alle typer
+            </label>
+            <label class="radio-option active" data-value="br25">
+              <input type="radio" name="standard" value="br25" checked>
+              BR25 (2025) — differentieret efter bygningstype
+            </label>
+            <label class="radio-option" data-value="low">
+              <input type="radio" name="standard" value="low">
+              Lavemissionsklasse — differentieret efter bygningstype
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============ CENTER: AUTO-ESTIMATED MATERIAL WORKSHEET ============ -->
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Materialer — A1&ndash;A3</h2>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--charcoal-soft);" id="rowCount">9 kategorier</span>
+      </div>
+      <div class="panel-body">
+
+        <div class="data-note" style="margin-top:0;margin-bottom:12px;background:var(--patina-tint);border-color:var(--patina);color:var(--patina-dark);">
+          Standardkategorierne herunder beregnes automatisk ud fra bygningsoplysningerne til venstre. Klik <strong>"Rediger"</strong> for at overstyre én kategori med en konkret mængde, når projektet er præcist nok til det.
+        </div>
+
+        <div class="table-scroll">
+        <table class="worksheet-table">
+          <thead>
+            <tr>
+              <th class="col-name">Bygningsdel / materiale</th>
+              <th class="col-qty">Mængde</th>
+              <th class="col-unit">Enhed</th>
+              <th class="col-factor">GWP</th>
+              <th class="col-result">kg CO₂e</th>
+              <th class="col-prec">Kilde</th>
+              <th class="col-action"></th>
+            </tr>
+          </thead>
+          <tbody id="materialRows"></tbody>
+          <tfoot>
+            <tr class="worksheet-footrow">
+              <td colspan="4">A1&ndash;A3 i alt (produktion)</td>
+              <td class="col-result" id="a1a3Total">0</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+        </div>
+
+        <button class="add-row-btn" id="addRowBtn">+ Tilføj ekstra materiale</button>
+
+        <div class="data-note">
+          <strong>Placeholder-data.</strong> Både de typologiske tommelfingerregler (kg/m² pr. bygningsdel) og materialernes GWP-faktorer er illustrative værdier til opstilling af værktøjet — ikke officielle Ökobaudat-, EPD Danmark- eller BR18 Tabel 7-værdier.
+        </div>
+
+        <div class="module-grid">
+          <div class="module-card">
+            <div class="m-label-row">
+              <span class="m-label">A4&ndash;A5 · Transport &amp; opførelse</span>
+              <span class="prec-badge assumed" id="a4a5Status">Antaget</span>
+            </div>
+            <div class="m-desc">Tillæg i % af |A1&ndash;A3| (numerisk mængde — se note)</div>
+            <div class="module-input-row">
+              <input type="number" id="a4a5pct" value="25" min="0" max="100" step="0.5" />
+              <button class="row-action-btn module-reset-btn" data-module="a4a5pct" type="button">Nulstil</button>
+            </div>
+          </div>
+          <div class="module-card">
+            <div class="m-label-row">
+              <span class="m-label">B4 · Udskiftninger</span>
+              <span class="prec-badge assumed" id="b4Status">Antaget</span>
+            </div>
+            <div class="m-desc">Tillæg i % af |A1&ndash;A3| over 50 år</div>
+            <div class="module-input-row">
+              <input type="number" id="b4pct" value="45" min="0" max="200" step="1" />
+              <button class="row-action-btn module-reset-btn" data-module="b4pct" type="button">Nulstil</button>
+            </div>
+          </div>
+          <div class="module-card">
+            <div class="m-label-row">
+              <span class="m-label">B6 · Energi i drift</span>
+              <span class="prec-badge assumed" id="b6Status">Antaget</span>
+            </div>
+            <div class="m-desc">kWh/m²/år × emissionsfaktor (kg CO₂e/kWh). Standard: BR18 §§259-260 energiramme (30/41 + 1.000/areal, bolig/andet) × dansk el-emissionsfaktor 2026 (Energistyrelsen).</div>
+            <div class="module-input-row">
+              <input type="number" id="b6kwh" value="36.7" min="0" style="flex:1;" />
+              <input type="number" id="b6factor" value="0.05" min="0" step="0.01" style="flex:1;" />
+              <button class="row-action-btn module-reset-btn" data-module="b6" type="button">Nulstil</button>
+            </div>
+          </div>
+          <div class="module-card">
+            <div class="m-label-row">
+              <span class="m-label">C3&ndash;C4 · Bortskaffelse (konventionelt)</span>
+              <span class="prec-badge assumed" id="c3c4Status">Antaget</span>
+            </div>
+            <div class="m-desc">Tillæg i % af A1&ndash;A3 fra kategorier med positivt bidrag</div>
+            <div class="module-input-row">
+              <input type="number" id="c3c4pct" value="30" min="0" max="200" step="0.5" />
+              <button class="row-action-btn module-reset-btn" data-module="c3c4pct" type="button">Nulstil</button>
+            </div>
+          </div>
+          <div class="module-card" style="grid-column:1 / -1;border-color:var(--patina);">
+            <div class="m-label-row">
+              <span class="m-label">C3 · Biogen kulstof-tilbagebetaling</span>
+              <span class="prec-badge assumed" id="biogenicStatus">Antaget</span>
+            </div>
+            <div class="m-desc">Når en kategori har <em>negativt</em> A1&ndash;A3 (fx en trækonstruktion med lagret kulstof), frigives det lagrede kulstof igen ved bortskaffelse. Tillæg i % af den numeriske størrelse af det negative bidrag.</div>
+            <div class="module-input-row">
+              <input type="number" id="biogenicGivebackPct" value="100" min="0" max="1000" step="10" />
+              <button class="row-action-btn module-reset-btn" data-module="biogenicGivebackPct" type="button">Nulstil</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============ RIGHT: RESULTS ============ -->
+    <div class="panel">
+      <div class="panel-head"><h2>Resultat</h2></div>
+
+      <div class="verdict">
+        <div class="figure" id="resultFigure">0,0</div>
+        <div class="unit">kg CO₂e / m² / år</div>
+        <div class="badge pass" id="resultBadge">under grænseværdi</div>
+        <div class="sub-badge-row" id="a4a5BadgeRow">
+          <span class="sub-badge-label">Byggeproces A4&ndash;A5:</span>
+          <span class="badge pass" id="a4a5Badge">—</span>
+        </div>
+      </div>
+
+      <div class="precision-panel">
+        <div class="precision-head">
+          <h3>Datapræcision — A1&ndash;A3</h3>
+          <span class="precision-score" id="precisionScore">20%</span>
+        </div>
+        <div class="precision-bar" id="precisionBar"></div>
+        <div class="legend" id="precisionLegend" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="carbon-bar-wrap">
+        <h3>Kulstofbudget — hovedgrænseværdi (§298, stk. 1)</h3>
+        <div class="carbon-bar" id="carbonBar">
+          <div class="threshold-line" id="thresholdLine" data-label="12,0"></div>
+        </div>
+        <div class="legend" id="barLegend"></div>
+      </div>
+
+      <div class="module-breakdown">
+        <div class="calc-trail" id="calcTrail"></div>
+        <div id="moduleBreakdownRows"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="io-row">
+
+    <div class="panel">
+      <div class="panel-head"><h2>Materialedata</h2></div>
+      <div class="panel-body">
+        <div class="io-card-desc">Erstat placeholder-datasættet med rigtige generiske eller produktspecifikke data.</div>
+        <button class="io-btn" id="okobaudatFetchBtn">Hent fra Ökobaudat (API)</button>
+        <button class="io-btn ghost" id="csvImportBtn">Importér CSV (EPD Danmark / ECO Portal / egen)</button>
+        <input type="file" id="csvFileInput" accept=".csv" />
+        <div class="status-line" id="materialImportStatus"></div>
+        <div class="field" style="margin-top:12px;">
+          <label>Forventet CSV-format</label>
+          <input type="text" disabled style="color:var(--charcoal-soft);background:var(--line-soft);font-size:11px;" value="navn, enhed, gwp_a1a3" />
+          <div class="hint">Kolonnenavne genkendes fleksibelt (fx "name/navn", "unit/enhed", "gwp/gwp_a1a3/kg co2e").</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>LCAx-udveksling</h2></div>
+      <div class="panel-body">
+        <div class="io-card-desc">Eksportér/importér i et LCAx-inspireret format (projekt → forsamling → EPD), til brug på tværs af værktøjer, fx LCAbyg.</div>
+        <button class="io-btn" id="lcaxExportBtn">Eksportér projekt som LCAx (.json)</button>
+        <button class="io-btn ghost" id="lcaxImportBtn">Importér LCAx-fil (.json)</button>
+        <input type="file" id="lcaxFileInput" accept=".json" />
+        <div class="status-line" id="lcaxStatus"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Projekter</h2></div>
+      <div class="panel-body">
+        <div class="io-card-desc">Gem den aktuelle opstilling lokalt i browseren, og hent den frem igen senere.</div>
+        <button class="io-btn" id="saveSnapshotBtn">Gem som nyt projekt</button>
+        <div class="snapshot-list" id="snapshotList"></div>
+        <div class="autosave-indicator"><span class="dot"></span> Auto-gemmer løbende i denne browser</div>
+        <button class="io-btn danger" id="resetToDefaultsBtn" style="margin-top:14px;">Nulstil hele projektet til standard</button>
+        <div class="status-line" id="resetStatus"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="notes">
+    <strong>Om dette skøn.</strong> Beregningen følger den overordnede modulopdeling i BR18/BR25 (A1&ndash;A3, A4&ndash;A5, B4, B6, C3&ndash;C4) over en fast referenceperiode på 50 år. A1&ndash;A3-mængderne genereres af forenklede typologiske tommelfingerregler pr. bygningsdel (fundament, bærende konstruktion, facade, tag, vinduer, indvendigt), der forfines efterhånden som geometrifelterne til venstre udfyldes, og som til enhver tid kan overstyres manuelt pr. kategori. Datapræcision-indikatoren afspejler, hvor stor en andel af A1&ndash;A3 der hviler på specifik projektgeometri eller manuelt indtastede mængder frem for typologiske gennemsnit — den er vejledende og siger intet om den absolutte nøjagtighed af selve GWP-faktorerne. A4&ndash;A5, B4 og C3&ndash;C4 er fortsat procentuelle tillæg til A1&ndash;A3 frem for komponentspecifikke beregninger.
+    <br><br>
+    <strong>Grænseværdier.</strong> Hovedgrænseværdien (A1-A3, B4, B6, C3-C4) og lavemissionsklassen er begge differentieret efter bygningstype, jf. Bygningsreglementet §§ 297&ndash;298 (bygningsreglementet.dk, gældende fra 1. juli 2025). Byggeprocessen (A4-A5) har sin egen, ikke-typedifferentierede grænseværdi på 1,5 kg CO₂e/m²/år (1,1 under lavemissionsklassen). Sommerhuse/ferieboliger har desuden en arealafhængig undergrænse (under/over 150 m²). Den nuværende BR18-mulighed i værktøjet afspejler den tidligere, flade 12,0-værdi, som kun gjaldt byggeri over 1.000 m² før 1. juli 2025. Tjek altid den aktuelle paragraftekst på bygningsreglementet.dk for dit konkrete projekt, herunder eventuelle undtagelser (§ 298, stk. 9-10) og reglerne for tilbygninger og blandet anvendelse (§ 298, stk. 3-4).
+    <br><br>
+    Til myndighedsgodkendt dokumentation kræves beregning i et validereret værktøj (fx LCAbyg) med produktspecifikke eller BR18-tabel-7-godkendte data.
+    <br><br>
+    <strong>Om felterne i Bygning-panelet.</strong> Talfelter bruger punktum kun til decimaler, aldrig som tusindtalsseparator — skriv 1078, ikke 1.078 (værktøjet advarer og foreslår en rettelse, hvis et areal-tal ser mistænkeligt lille ud). Niveau 1: tomme etage-felter antager, at alle etager ligger over jord og at der ikke er kælder. Niveau 2: længde × højde har forrang frem for et direkte facadeareal, hvis begge udfyldes, da det typisk er nemmere at hente ud af et projekt; er ingen af delene udfyldt, skønnes arealet ud fra omkreds × højde baseret på areal og etager. Niveau 3: en angivet fundamentslængde erstatter det arealbaserede skøn med en mere præcis, løbemeterbaseret beregning. Niveau 4: et angivet tagareal erstatter fodaftryk × tagfaktor-skønnet med et direkte tal. Grænseværdierne, der vises ved resultatet, er vejledende — bekræft altid mod den aktuelle paragraftekst for dit konkrete projekt.
+    <br><br>
+    <strong>Om kalibrering ud fra virkelige projekter.</strong> Koefficienterne (fundament, bærende konstruktion, installationer m.fl.) opdateres løbende ud fra eksporterede LCAbyg-resultater. Vær ved sammenligning opmærksom på, at et referenceprojekts <em>lovgivningsmæssige alder</em> har betydning to steder: (1) om projektets egen grænseværdi-vurdering byggede på den flade BR18-regel (12,0, kun for byggeri over 1.000 m²) eller den nuværende, typedifferentierede BR25-regel — de kan give vidt forskellige konklusioner om samme tal, og (2) om materialevalgene (fx tunge fundamenter, betonbaseret bæring) afspejler en tid uden pres fra skærpede, differentierede krav og derfor ikke nødvendigvis er repræsentative for, hvordan nye projekter designes for at holde sig under de stramme grænser. Reference-data bør derfor bruges til at kalibrere størrelsesordener, ikke som facit for "korrekt" materialevalg.
+    <br><br>
+    <strong>Om A4&ndash;A5/B4/C3&ndash;C4-tillæggene.</strong> Standardværdierne (A4&ndash;A5: 25%, B4: 45%, C3&ndash;C4: 30%) er opdateret fra de oprindelige, rent gættede placeholders (8/15/3%) til at afspejle ét reelt LCAbyg-projekt — stadig kun ét datapunkt, så brug dem som et bedre udgangspunkt, ikke et facit. A4&ndash;A5 og B4 ganges nu på den <em>numeriske</em> størrelse af A1&ndash;A3 (summen af absolutværdier pr. kategori) i stedet for det nettoficerede tal, fordi en trækonstruktion med lagret kulstof stadig skal transporteres og potentielt udskiftes, uanset at dens A1&ndash;A3 kan være negativ. C3&ndash;C4 er splittet i to: en konventionel andel (kun kategorier med positivt A1&ndash;A3) og en separat <strong>biogen tilbagebetaling</strong>, der udløses, når en kategori har negativt A1&ndash;A3 — fordi kulstof lagret i træ frigives igen ved bortskaffelse. Standardværdien for tilbagebetalingen (100%) er et forsigtigt, "kulstofneutralt over levetiden"-udgangspunkt; i det ene reelle projekt, vi har kalibreret ud fra indtil videre, var den faktiske frigivelse omkring 650% af kategoriens negative A1&ndash;A3 — sandsynligvis fordi nettotallet for kategorien allerede var udlignet mod andre, ikke-biogene materialer i samme bygningsdel. Overvej at sætte tilbagebetalingsprocenten højere for projekter med markant massivtræ/CLT.
+    <br><br>
+    <strong>Om "Tag"-kategoriens omfang.</strong> Kategorien dækkede oprindeligt kun en tagpap-membran (4 kg/m²) — ved sammenligning med et reelt projekt viste det sig, at en fuld tagkonstruktion (bærende tagdæk + isolering + membran) reelt vejer omkring 83 kg/m² tagflade, ca. 20x mere. Standarddensiteten og -materialet er opdateret til at afspejle den fulde opbygning, med et let (træ, ofte negativt GWP) og et tungt (beton/stål) valg — vælg det, der passer til projektet, eller overstyr manuelt.
+    <br><br>
+    <strong>Om Terrændæk som selvstændig kategori.</strong> Samme sammenligning viste, at "Fundament" i praksis kun dækkede selve fundamentet (stribe/plade/punkt/pæl) — terrændækket (betonpladen støbt over hele fodaftrykket) manglede helt, og var med 624.620 kg i ét reelt projekt langt den tungeste enkeltpost i hele bygningen. Terrændæk er derfor tilføjet som sin egen kategori (≈1.159 kg/m² fodaftryk, kalibreret fra samme projekt) frem for et preset under Fundament.
+    <br><br>
+    <strong>Princip for nye kategorier vs. presets.</strong> Når en bygningsdel overvejes tilføjet, afvejes to hensyn mod hinanden: (1) risikoen for at den bliver glemt, hvis den kun findes som et valgfrit preset under en anden kategori — en bygningsdel, der reelt findes i stort set alle projekter (som terrændæk), bør have sin egen kategori, netop så den ikke kan forsvinde ved en fejl. Over for (2) at hver ny kategori tilføjer kompleksitet, som taler imod et screeningsværktøjs karakter — bygningsdele, der kun er relevante i særlige tilfælde, passer bedre som et preset/materialevalg under en eksisterende kategori. Brug denne afvejning fremadrettet, når nye bygningsdele viser sig at mangle.
+    <br><br>
+    <strong>Om "Bærende system".</strong> "Bærende konstruktion" antog oprindeligt altid et fritstående søjle-/bjælkesystem, uanset bygningstype. Ved sammenligning med et reelt projekt viste det sig, at bygningen reelt var vægbærende ("Søjler og bjælker" var næsten ingenting — 357 kg), mens bæreevnen i stedet lå i facade- og indervæggene, som allerede tælles med under Facade og Indvendigt. At beholde en fuld søjle-/bjælke-antagelse oveni ville dobbelttælle den bærende funktion. "Bærende system" lader dig derfor angive, om bygningen er vægbærende (kun en lille residualmængde til overliggere mv.) eller skeletbaseret (fuld strukturintensitet). Uden angivelse antages vægbærende for boliger og institution, skelet for kontor — en tommelfingerregel efter dansk praksis, bekræftet af ét reelt datapunkt.
+    <br><br>
+    <strong>Om etagedæk (etage-skalering).</strong> Ingen af de oprindelige formler tog højde for, hvor mange etager en bygning har over jord — hverken fundament, terrændæk eller bærende konstruktion. Sammenligning af et 2-etagers og et 5-etagers reelt projekt gav to forskellige svar: fundament/terrændæk pr. m² fodaftryk var faktisk <em>lavere</em> i det høje byggeri (sandsynligvis forvekslet med anden funderingsteknologi og lettere materialevalg) og er derfor <strong>ikke</strong> skaleret efter etager. Til gengæld havde det høje projekt en markant "Dæk"-kategori (etagedæk, 2.786.764 kg), som var helt fraværende i 2-etagers-projektet. "Bærende konstruktion" har derfor fået et etagedæk-tillæg (342 kg/m² fodaftryk pr. etage, fra 3. etage og opefter — startpunktet er valgt, så det ikke forvrider lave bygninger, hvor et enkelt dæk ofte er talt med andre steder). Gælder uanset vægbærende/skelet, da begge har brug for dæk.
+    <br><br>
+    <strong>Om materialevalg pr. kategori.</strong> I automatisk tilstand er rullelisten for hver kategori begrænset til materialer, der reelt giver mening for netop den bygningsdel (fx viser Tag ikke Gipsplade) — se CATEGORY_MATERIAL_PRESETS i koden. Importerede/CSV-materialer er undtaget denne begrænsning og vises fortsat for alle kategorier med samme enhed, da de er brugerens egne data.
+    <br><br>
+    <strong>Om B6-standardværdien.</strong> kWh-delen af B6 var oprindeligt en fast, ukalibreret gætteværdi (20). Den er nu baseret på den lovpligtige energiramme i BR18 §§259-260: boliger/kollegier/hoteller må højst bruge 30 + 1.000/areal kWh/m²/år, andre bygninger (kontor, institution, skole mv.) 41 + 1.000/areal. Det er en øvre lovgrænse for nybyggeri, ikke et estimat af faktisk forbrug — men et markant bedre udgangspunkt end et vilkårligt tal, og den opdaterer sig automatisk med bygningstype og areal, indtil feltet redigeres manuelt. Bemærk at særligt energikrævende bygninger (højt belysningsniveau, ekstra ventilation, lang benyttelsestid, jf. §260 stk. 3) kan kræve manuel opjustering. Emissionsfaktoren (0,05 kg CO₂e/kWh) matcher den danske el-emissionsfaktor for 2026 (50,8 g CO₂e/kWh, Energistyrelsen) — fjernvarme varierer typisk mere efter leverandør og bør overstyres, hvis det er den primære energikilde.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+
+  // ================= CONSTANTS & PLACEHOLDER DATA =================
+  // All numeric coefficients below are illustrative order-of-magnitude
+  // placeholders for scaffolding this tool — not sourced from Ökobaudat,
+  // EPD Danmark, or BR18 Table 7. Replace before using for real decisions.
+
+  let MATERIALS = [
+    { id:'beton-insitu',   name:'Beton, in-situ (C30/37)',        unit:'kg', gwp:0.12 },
+    { id:'beton-elem',     name:'Betonelementer (præfab)',        unit:'kg', gwp:0.13 },
+    { id:'stal-arm',       name:'Armeringsstål',                  unit:'kg', gwp:0.75 },
+    { id:'stal-konstr',    name:'Konstruktionsstål',               unit:'kg', gwp:1.55 },
+    { id:'tegl',           name:'Tegl (mur-/facadesten)',         unit:'kg', gwp:0.23 },
+    { id:'trae-konstr',    name:'Konstruktionstræ (KL/limtræ)',   unit:'kg', gwp:0.05 },
+    { id:'krydsfiner',     name:'Krydsfiner/spånplade',           unit:'kg', gwp:0.35 },
+    { id:'mineraluld',     name:'Mineraluld (isolering)',         unit:'kg', gwp:1.05 },
+    { id:'eps',            name:'EPS-isolering',                  unit:'kg', gwp:2.50 },
+    { id:'gips',           name:'Gipsplade',                      unit:'kg', gwp:0.28 },
+    { id:'glas',           name:'Glas (facade/vinduer)',          unit:'m²', gwp:35.0 },
+    { id:'tagpap',         name:'Tagpap (bitumen — kun membran)',  unit:'kg', gwp:0.60 },
+    // Fuld tagkonstruktion (struktur+isolering+membran), ikke kun tagpappen —
+    // se note ved ROOFING_AREA_DENSITY. Let/tung afspejler træ- vs.
+    // beton/stål-baseret tagdæk, ligesom installationer længere nede.
+    { id:'tagkonstruktion-let',  name:'Tagkonstruktion, let (træ — struktur+isolering+membran)', unit:'kg', gwp:-0.10 },
+    { id:'tagkonstruktion-tung', name:'Tagkonstruktion, tung (beton/stål — struktur+isolering+membran)', unit:'kg', gwp:0.20 },
+    { id:'alu',            name:'Aluminium (facadebeklædning)',   unit:'kg', gwp:8.50 },
+    { id:'pvc',            name:'PVC (rammer/rør)',                unit:'kg', gwp:2.40 },
+    // Installationer: ventilation/vand/varme er en blandet materialesammensætning
+    // (stål, kobber, PVC, isolering m.m.), så den modelleres her som tre grove
+    // "niveau"-materialer i kg CO2e pr. m² opvarmet areal, frem for et enkelt
+    // kg-baseret materiale. Startpunktet (installation-middel ≈ 25) er løst
+    // kalibreret ud fra ÉT reelt LCAbyg-projekt (institution) — se note ved
+    // kategorien. Bør genkalibreres, når flere reference-projekter foreligger.
+    { id:'installation-let',    name:'Installationer, let (bolig — enkel opvarmning)',        unit:'m²', gwp:10 },
+    { id:'installation-middel', name:'Installationer, middel (etage/institution)',            unit:'m²', gwp:25 },
+    { id:'installation-tung',   name:'Installationer, tung (kontor — ventilation/køl)',       unit:'m²', gwp:32 },
+    // Ekstra presets, tilføjet så hver kategoris rulleliste kan begrænses til
+    // reelt meningsfulde valg for netop den bygningsdel (se
+    // CATEGORY_MATERIAL_PRESETS) i stedet for alle kg-materialer på tværs.
+    { id:'beton-lavco2',        name:'Beton, lav-CO2 (flyveaske/slagge-erstatning)', unit:'kg', gwp:0.07 },
+    { id:'clt-massivtrae',      name:'Massivtræ/CLT-element',                        unit:'kg', gwp:-0.05 },
+    { id:'traefiber-isolering', name:'Træfiberisolering',                            unit:'kg', gwp:-0.30 },
+    { id:'fibercement',         name:'Fibercement (facadeplade)',                    unit:'kg', gwp:0.65 },
+    // Grønt tag har typisk et tungere, jordbaseret opbygningslag end de øvrige
+    // tagpresets — ROOFING_AREA_DENSITY antager samme kg/m² for alle
+    // tagvalg som en screening-forenkling; overvej manuel mængde-overstyring
+    // for grønne tage, hvor substratlaget kan veje markant mere.
+    { id:'tag-groent',          name:'Grønt tag (ekstensivt, sedum)',                unit:'kg', gwp:0.10 },
+    { id:'vinduer-fuld',        name:'Vinduer, komplet enhed (ramme+glas)',          unit:'m²', gwp:65.0 },
+    { id:'traeplade-finish',    name:'Træplade (indvendig finish)',                  unit:'kg', gwp:0.15 },
+    { id:'kalkpuds',            name:'Kalkmørtel/puds (indvendig finish)',           unit:'kg', gwp:0.20 },
+  ];
+
+  // Begrænser hver kategoris rulleliste i auto-tilstand til materialer, der
+  // reelt giver mening for netop den bygningsdel — fx skal Tag ikke vise
+  // Gipsplade eller Tegl som valgmuligheder. Importerede/CSV-materialer
+  // filtreres fortsat kun efter enhed (se materialOptionsFiltered), da de er
+  // brugerens egne data og ikke skal begrænses af denne kuraterede liste.
+  const CATEGORY_MATERIAL_PRESETS = {
+    fundament:            ['beton-insitu', 'beton-lavco2'],
+    terraendaek:          ['beton-insitu', 'beton-lavco2'],
+    baerende:             ['beton-elem', 'stal-konstr', 'trae-konstr', 'clt-massivtrae'],
+    'facade-isolering':   ['mineraluld', 'eps', 'traefiber-isolering'],
+    'facade-beklaedning': ['tegl', 'alu', 'trae-konstr', 'krydsfiner', 'fibercement'],
+    tag:                  ['tagpap', 'tagkonstruktion-let', 'tagkonstruktion-tung', 'tag-groent'],
+    vinduer:              ['glas', 'vinduer-fuld'],
+    indvendigt:           ['gips', 'traeplade-finish', 'kalkpuds'],
+    installationer:       ['installation-let', 'installation-middel', 'installation-tung'],
+  };
+
+  // Grænseværdier jf. Bygningsreglementet (BR18) § 298, som opdateret med
+  // virkning fra 1. juli 2025 (omtalt som "BR25"), hentet direkte fra den
+  // officielle tekst på bygningsreglementet.dk. § 298, stk. 1: hovedgrænse-
+  // værdien er differentieret efter bygningstype. § 298, stk. 5: selvstændig
+  // grænseværdi for byggeprocessen (A4-A5), ens for alle bygningstyper.
+  // § 297, stk. 13 og 15: den frivillige lavemissionsklasse har sine egne,
+  // strammere, ligeledes typedifferentierede værdier. Før 1. juli 2025 var
+  // hovedgrænseværdien flad (12,0 for alle typer) og gjaldt kun byggeri over
+  // 1.000 m², og der fandtes ingen selvstændig grænseværdi for A4-A5.
+  // Kategori-mapning fra værktøjets bygningstyper til lovens kategorier:
+  //   parcelhus   → "stuehuse, fritliggende enfamiliehuse og række-/kæde-/dobbelthuse"
+  //   etage       → "etageboliger, samt kontor, handel, lager o.lign."
+  //   kontor      → samme kategori som etage (loven skelner ikke her)
+  //   institution → ikke nævnt eksplicit i loven; antaget som "øvrigt byggeri" (residualkategorien)
+  //   sommerhus   → egen kategori med arealafhængig undergrænse, se getMainThreshold()
+  const THRESHOLDS_BY_TYPE = {
+    br18: { parcelhus:12.0, etage:12.0, kontor:12.0, institution:12.0 },
+    br25: { parcelhus:6.7,  etage:7.5,  kontor:7.5,  institution:8.0  },
+    low:  { parcelhus:5.4,  etage:6.1,  kontor:6.1,  institution:6.4  }
+  };
+  const PROCESS_LIMIT = { br18:null, br25:1.5, low:1.1 }; // A4-A5, kg CO2e/m²/år
+  const RSP = 50; // reference study period, years — fixed by BR18/BR25
+
+  // Værktøjets aktuelle standardværdier for modul-tillæggene. Bruges til at
+  // vise "Antaget" vs. "Manuel" på modulfelterne — fx når en tidligere
+  // gemt/importeret fil stadig har ældre standardværdier, som ikke længere
+  // matcher værktøjets nuværende bedste gæt (se footer-note om kalibrering).
+  const DEFAULT_MODULE_VALUES = {
+    a4a5pct: 25, b4pct: 45, c3c4pct: 30, biogenicGivebackPct: 100,
+    b6factor: 0.05 // ≈ dansk el-emissionsfaktor 2026 (50,8 g CO2e/kWh, Energistyrelsen)
+  };
+  // BR18 §§259-260: lovpligtig energiramme for nybyggeri, differentieret efter
+  // bolig vs. andre bygninger og areal. Boliger/kollegier/hoteller: 30 +
+  // 1.000/A kWh/m²/år. Andre bygninger (kontor, institution, skole mv.): 41 +
+  // 1.000/A kWh/m²/år. Dette er en LOVBUNDET maksimumsgrænse for nybyggeri,
+  // ikke et frit gæt — brugt her som geometribaseret standard for B6, i
+  // stedet for en fast, ukalibreret kWh-værdi. Bemærk: tillæg for særligt
+  // energikrævende brug (§260 stk. 3 — højt belysningsniveau, ekstra
+  // ventilation, langt benyttelsestid mv.) er ikke medregnet og kan kræve
+  // manuel opjustering for den type bygninger.
+  const BOLIG_TYPES = ['parcelhus', 'etage', 'sommerhus'];
+  function getDefaultB6Kwh(g){
+    const base = BOLIG_TYPES.includes(g.buildingType) ? 30 : 41;
+    return base + 1000 / Math.max(g.heatedArea, 1);
+  }
+
+  // § 298, stk. 1 differentiates sommerhuse/ferieboliger by heated area
+  // (< 150 m² vs. ≥ 150 m²) rather than giving them one fixed value, so
+  // that case is handled separately from the flat per-type lookup table.
+  function getMainThreshold(standard, buildingType, heatedArea){
+    if(buildingType === 'sommerhus'){
+      if(standard === 'br18') return 12.0; // pre-BR25 §298 was flat and only applied >1.000 m²
+      if(standard === 'low') return heatedArea < 150 ? 3.2 : 5.4;   // § 297, stk. 13, nr. 1-2
+      return heatedArea < 150 ? 4.0 : 6.7;                          // § 298, stk. 1, nr. 1-2
+    }
+    return THRESHOLDS_BY_TYPE[standard][buildingType];
+  }
+  function getA4A5Threshold(standard){
+    return PROCESS_LIMIT[standard];
+  }
+
+  // Building-type archetype assumptions (kg/m² GFA, or ratios)
+  const TYPE_DEFAULTS = {
+    parcelhus:   { baerende:'trae-konstr', beklaedning:'tegl',        windowRatio:0.18, structureIntensity:220, interiorIntensity:25 },
+    etage:       { baerende:'beton-elem',  beklaedning:'tegl',        windowRatio:0.25, structureIntensity:320, interiorIntensity:30 },
+    kontor:      { baerende:'stal-konstr', beklaedning:'alu',         windowRatio:0.45, structureIntensity:260, interiorIntensity:22 },
+    institution: { baerende:'beton-elem',  beklaedning:'tegl',        windowRatio:0.30, structureIntensity:300, interiorIntensity:28 },
+    sommerhus:   { baerende:'trae-konstr', beklaedning:'trae-konstr', windowRatio:0.15, structureIntensity:150, interiorIntensity:20 }
+  };
+
+  const FOUNDATION_COEFF = { '':220, plade:220, stribe:140, punkt:90, pael:110 };       // kg beton / m² fodaftryk
+  // Løbemeter-baseret alternativ til ovenstående, brugt når fundamentslængde
+  // kendes direkte (mere pålideligt end et fladt m²-skøn). Kalibreret løst ud
+  // fra ét reelt projekt (417 m stribefundament ≈ 327.697 kg beton, dvs. knap
+  // 790 kg/m) — bør genkalibreres med flere referenceprojekter.
+  const FOUNDATION_LINEAR_DENSITY = 790; // kg beton / løbende meter fundament
+  // Terrændæk er en selvstændig kategori, adskilt fra selve fundamentet, for
+  // at undgå at den bliver glemt i et fladt "fundament"-skøn — se note ved
+  // CATEGORY_META. Kalibreret ud fra ét reelt projekt: 624.620 kg terrændæk
+  // over et fodaftryk på ~539 m² ≈ 1.159 kg/m².
+  const TERRAINDAEK_AREA_DENSITY = 1159; // kg beton / m² fodaftryk
+  const ROOF_FACTOR = { '':1.0, flad:1.0, 'flad-udhaeng':1.1, sadel:1.3, 'sadel-udhaeng':1.4 };
+  const CLADDING_AREA_DENSITY = { tegl:140, alu:5, 'trae-konstr':10, krydsfiner:6, fibercement:16 };    // kg/m² facade
+  const INSULATION_AREA_DENSITY = 8;   // kg/m² facade
+  // Kalibreret ud fra ét reelt LCAbyg-projekt: fuld tagkonstruktion
+  // (tagpap/membran + isolering + bærende tagdæk) landede på ~82,6 kg/m²
+  // tagflade — ca. 20x tungere end en tagpap-membran alene (~4 kg/m²), som
+  // var værktøjets oprindelige (for snævre) antagelse.
+  const ROOFING_AREA_DENSITY = 83;     // kg/m² tagflade, fuld opbygning
+  const BASEMENT_WALL_DENSITY = 300;   // kg beton / m² kældervæg
+  const DEFAULT_STOREY_HEIGHT = 3;     // m, bruges kun når facadehøjde ikke er angivet
+
+  const CATEGORY_META = [
+    { key:'fundament',            label:'Fundament',                unit:'kg' },
+    { key:'terraendaek',          label:'Terrændæk',                 unit:'kg' },
+    { key:'baerende',             label:'Bærende konstruktion',      unit:'kg' },
+    { key:'facade-isolering',     label:'Facade — isolering',        unit:'kg' },
+    { key:'facade-beklaedning',   label:'Facade — beklædning',       unit:'kg' },
+    { key:'tag',                  label:'Tag',                       unit:'kg' },
+    { key:'vinduer',              label:'Vinduer & døre',            unit:'m²' },
+    { key:'indvendigt',           label:'Indvendige overflader',     unit:'kg' },
+    { key:'installationer',       label:'Installationer (vent./vand/varme)', unit:'m²' },
+  ];
+
+  // Danske parcel-/etage-/institutionsbyggerier er hyppigt vægbærende (last
+  // føres via facade-/skillevægge, allerede talt med under Facade og
+  // Indvendigt); kontorbyggeri har oftere brug for store, fleksible spænd og
+  // hælder derfor mod et søjle-/bjælkesystem. Bekræftet af ét reelt projekt
+  // (institution), hvor "Søjler og bjælker" var næsten ingenting (357 kg) —
+  // stadig kun ét datapunkt, så overstyr når det reelle system kendes.
+  const CONSTRUCTION_PRINCIPLE_BY_TYPE = {
+    parcelhus:'vaeg', sommerhus:'vaeg', etage:'vaeg', institution:'vaeg', kontor:'skelet'
+  };
+  // Selv en vægbærende bygning har typisk enkelte bjælker/overliggere (fx
+  // over vinduer/døre) — en lille residual-mængde, ikke nul. Hovedparten af
+  // bæreevnen er allerede talt med i facade-/indvendigt-kategorierne.
+  const WALL_BEARING_RESIDUAL_INTENSITY = 15; // kg/m² opvarmet areal
+
+  // Etagedæk (dæk mellem etager) findes ikke som selvstændig kategori og var
+  // slet ikke modelleret — hverken vægbærende-residualen eller den skelet-
+  // baserede strukturintensitet indeholder noget etage-afhængigt tillæg.
+  // Kalibreret ud fra ét reelt etagebyggeri (5 etager over jord): "Dæk" vejede
+  // 2.786.764 kg over et fodaftryk på ~2.716 m². Til sammenligning havde et
+  // andet reelt projekt (institution, 2 etager over jord) INGEN registreret
+  // dæk-masse overhovedet — hvilket modsiger, at simple 1-etages-tillæg giver
+  // mening, men understøtter, at flere etager (3+) kræver reelt, gentaget
+  // dækareal. Tillægget starter derfor først ved 3. etage og opefter, så det
+  // ikke forvrider lave bygninger, hvor et enkelt dæk ofte er talt med andre
+  // steder (fx i væggene) i praksis. Anvendes uafhængigt af bærende system,
+  // da både vægbærende og skeletbaserede bygninger har brug for dæk.
+  const DECK_DENSITY_PER_FLOOR = 342; // kg/m² fodaftryk, pr. etage fra 3. etage og opefter
+
+  const INSTALLATION_MATERIAL_BY_TYPE = {
+    parcelhus:'installation-let', sommerhus:'installation-let',
+    etage:'installation-middel', institution:'installation-middel',
+    kontor:'installation-tung'
+  };
+
+  // Danske parcel-/sommerhuse har typisk en let trætagkonstruktion (spær);
+  // større etage-/institutions-/kontorbyggeri hælder oftere mod beton/stål —
+  // men det er en grov tommelfingerregel, ikke en regel. Overstyr manuelt
+  // pr. projekt, når det vides.
+  const TAG_MATERIAL_BY_TYPE = {
+    parcelhus:'tagkonstruktion-let', sommerhus:'tagkonstruktion-let',
+    etage:'tagkonstruktion-tung', institution:'tagkonstruktion-tung',
+    kontor:'tagkonstruktion-tung'
+  };
+
+  function defaultMaterialForCategory(type){
+    const t = TYPE_DEFAULTS[type] || TYPE_DEFAULTS.parcelhus;
+    return {
+      fundament:'beton-insitu', terraendaek:'beton-insitu', baerende:t.baerende, 'facade-isolering':'mineraluld',
+      'facade-beklaedning':t.beklaedning, tag: TAG_MATERIAL_BY_TYPE[type] || 'tagkonstruktion-tung', vinduer:'glas', indvendigt:'gips',
+      installationer: INSTALLATION_MATERIAL_BY_TYPE[type] || 'installation-let'
+    };
+  }
+
+  // ================= STATE =================
+  let standardRows = {};
+  (function initStandardRows(){
+    const defaults = defaultMaterialForCategory('parcelhus');
+    CATEGORY_META.forEach(meta => {
+      standardRows[meta.key] = { mode:'auto', materialId: defaults[meta.key], manualQty: 0 };
+    });
+  })();
+
+  let customRows = [];
+  let rowIdSeq = 0;
+  let currentStandard = 'br25';
+
+  // ================= HELPERS =================
+
+  function formatNum(n, decimals){
+    decimals = decimals === undefined ? 1 : decimals;
+    return (n || 0).toLocaleString('da-DK', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  }
+  function escapeHtml(s){
+    return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function showStatus(elId, message, type){
+    const el = document.getElementById(elId);
+    if(!message){ el.classList.remove('show'); return; }
+    el.textContent = message;
+    el.className = 'status-line show ' + (type || 'info');
+  }
+  function tierLabelText(tier){
+    return { assumed:'Antaget', refined:'Forfinet', manual:'Manuel' }[tier] || tier;
+  }
+
+  function materialOptions(selectedId){
+    const builtin = MATERIALS.filter(m => !m.custom);
+    const custom = MATERIALS.filter(m => m.custom);
+    let html = '<optgroup label="Indbygget (placeholder)">' +
+      builtin.map(m => `<option value="${m.id}" ${m.id===selectedId?'selected':''}>${m.name}</option>`).join('') +
+      '</optgroup>';
+    if(custom.length){
+      html += '<optgroup label="Importeret">' +
+        custom.map(m => `<option value="${m.id}" ${m.id===selectedId?'selected':''}>${m.name}${m.needsReview ? ' — tjek GWP' : ''}</option>`).join('') +
+        '</optgroup>';
+    }
+    return html;
+  }
+  function materialOptionsFiltered(categoryKey, unit, selectedId){
+    const presetIds = CATEGORY_MATERIAL_PRESETS[categoryKey];
+    const builtin = presetIds
+      ? MATERIALS.filter(m => !m.custom && presetIds.includes(m.id))
+      : MATERIALS.filter(m => !m.custom && m.unit === unit);
+    const custom = MATERIALS.filter(m => m.custom && m.unit === unit);
+    let html = '<optgroup label="Indbygget (placeholder)">' +
+      builtin.map(m => `<option value="${m.id}" ${m.id===selectedId?'selected':''}>${m.name}</option>`).join('') +
+      '</optgroup>';
+    if(custom.length){
+      html += '<optgroup label="Importeret">' +
+        custom.map(m => `<option value="${m.id}" ${m.id===selectedId?'selected':''}>${m.name}${m.needsReview ? ' — tjek GWP' : ''}</option>`).join('') +
+        '</optgroup>';
+    }
+    return html;
+  }
+
+  // ================= GEOMETRY ENGINE =================
+
+  function readGeometry(){
+    return {
+      buildingType: document.getElementById('buildingType').value,
+      constructionPrinciple: document.getElementById('constructionPrinciple').value,
+      heatedArea: parseFloat(document.getElementById('heatedArea').value) || 1,
+      floorsTotal: parseFloat(document.getElementById('floors').value) || 1,
+      floorsAboveGrade: document.getElementById('floorsAboveGrade').value,
+      floorsBelowGrade: document.getElementById('floorsBelowGrade').value,
+      facadeAreaOverride: document.getElementById('facadeAreaOverride').value,
+      facadeLength: document.getElementById('facadeLength').value,
+      facadeHeight: document.getElementById('facadeHeight').value,
+      foundationType: document.getElementById('foundationType').value,
+      foundationLength: document.getElementById('foundationLength').value,
+      roofType: document.getElementById('roofType').value,
+      roofAreaOverride: document.getElementById('roofAreaOverride').value
+    };
+  }
+
+  function floorsSplit(g){
+    return g.floorsAboveGrade !== '' || g.floorsBelowGrade !== '';
+  }
+
+  function getFootprint(g){
+    const floorsAbove = g.floorsAboveGrade !== '' ? parseFloat(g.floorsAboveGrade) : g.floorsTotal;
+    return Math.max(g.heatedArea / Math.max(floorsAbove, 1), 1);
+  }
+
+  function getFacadeArea(g){
+    const hasLengthHeight = g.facadeLength !== '' && g.facadeHeight !== '' && !isNaN(parseFloat(g.facadeLength)) && !isNaN(parseFloat(g.facadeHeight));
+    if(hasLengthHeight){
+      return { area: parseFloat(g.facadeLength) * parseFloat(g.facadeHeight), refined:true };
+    }
+    if(g.facadeAreaOverride !== '' && !isNaN(parseFloat(g.facadeAreaOverride))){
+      return { area: parseFloat(g.facadeAreaOverride), refined:true };
+    }
+    const footprint = getFootprint(g);
+    const perimeter = 4 * Math.sqrt(footprint);
+    const floorsAbove = g.floorsAboveGrade !== '' ? parseFloat(g.floorsAboveGrade) : g.floorsTotal;
+    const height = floorsAbove * DEFAULT_STOREY_HEIGHT;
+    return { area: perimeter * height, refined:false };
+  }
+
+  function computeCategoryEstimate(key, g){
+    const typeDef = TYPE_DEFAULTS[g.buildingType] || TYPE_DEFAULTS.parcelhus;
+    const fSplit = floorsSplit(g);
+
+    if(key === 'fundament'){
+      const hasLength = g.foundationLength !== '' && !isNaN(parseFloat(g.foundationLength));
+      if(hasLength){
+        const basementFloors = g.floorsBelowGrade !== '' ? parseFloat(g.floorsBelowGrade) : 0;
+        const perimeterForBasement = 4 * Math.sqrt(getFootprint(g));
+        const basementExtra = basementFloors > 0 ? perimeterForBasement * DEFAULT_STOREY_HEIGHT * basementFloors * BASEMENT_WALL_DENSITY : 0;
+        return { qty: parseFloat(g.foundationLength) * FOUNDATION_LINEAR_DENSITY + basementExtra, refined:true };
+      }
+      const footprint = getFootprint(g);
+      const perimeter = 4 * Math.sqrt(footprint);
+      const coeff = FOUNDATION_COEFF[g.foundationType] !== undefined ? FOUNDATION_COEFF[g.foundationType] : FOUNDATION_COEFF[''];
+      const basementFloors = g.floorsBelowGrade !== '' ? parseFloat(g.floorsBelowGrade) : 0;
+      const basementExtra = basementFloors > 0 ? perimeter * DEFAULT_STOREY_HEIGHT * basementFloors * BASEMENT_WALL_DENSITY : 0;
+      return { qty: footprint * coeff + basementExtra, refined: (g.foundationType !== '') || fSplit };
+    }
+    if(key === 'terraendaek'){
+      const footprint = getFootprint(g);
+      return { qty: footprint * TERRAINDAEK_AREA_DENSITY, refined: fSplit };
+    }
+    if(key === 'baerende'){
+      const principle = g.constructionPrinciple !== '' ? g.constructionPrinciple : (CONSTRUCTION_PRINCIPLE_BY_TYPE[g.buildingType] || 'vaeg');
+      // Vægbærende: bæreevnen ligger allerede i facade-/indervægsmasserne
+      // (Facade-beklædning/Indvendigt), så kun en lille residual (fx
+      // overliggere) lægges til her for at undgå at tælle den bærende
+      // funktion to gange. Skelet: fuld strukturintensitet, som før.
+      const intensity = principle === 'vaeg' ? WALL_BEARING_RESIDUAL_INTENSITY : typeDef.structureIntensity;
+      const baseQty = g.heatedArea * intensity;
+
+      // Etagedæk-tillæg — se DECK_DENSITY_PER_FLOOR. Gælder uanset bærende
+      // system, da begge typer har brug for dæk mellem etagerne.
+      const floorsAbove = g.floorsAboveGrade !== '' ? parseFloat(g.floorsAboveGrade) : g.floorsTotal;
+      const extraFloorsForDeck = Math.max(floorsAbove - 2, 0);
+      const footprint = getFootprint(g);
+      const deckQty = extraFloorsForDeck * footprint * DECK_DENSITY_PER_FLOOR;
+
+      const refined = g.constructionPrinciple !== '' || fSplit;
+      return { qty: baseQty + deckQty, refined };
+    }
+    if(key === 'facade-isolering'){
+      const fa = getFacadeArea(g);
+      return { qty: fa.area * (1 - typeDef.windowRatio) * INSULATION_AREA_DENSITY, refined: fa.refined || fSplit };
+    }
+    if(key === 'facade-beklaedning'){
+      const fa = getFacadeArea(g);
+      const density = CLADDING_AREA_DENSITY[standardRows['facade-beklaedning'].materialId] || 50;
+      return { qty: fa.area * (1 - typeDef.windowRatio) * density, refined: fa.refined || fSplit };
+    }
+    if(key === 'tag'){
+      const hasRoofArea = g.roofAreaOverride !== '' && !isNaN(parseFloat(g.roofAreaOverride));
+      if(hasRoofArea){
+        return { qty: parseFloat(g.roofAreaOverride) * ROOFING_AREA_DENSITY, refined:true };
+      }
+      const footprint = getFootprint(g);
+      const factor = ROOF_FACTOR[g.roofType] !== undefined ? ROOF_FACTOR[g.roofType] : ROOF_FACTOR[''];
+      return { qty: footprint * factor * ROOFING_AREA_DENSITY, refined: (g.roofType !== '') || fSplit };
+    }
+    if(key === 'vinduer'){
+      const fa = getFacadeArea(g);
+      return { qty: fa.area * typeDef.windowRatio, refined: fa.refined || fSplit };
+    }
+    if(key === 'indvendigt'){
+      return { qty: g.heatedArea * typeDef.interiorIntensity, refined:false };
+    }
+    if(key === 'installationer'){
+      // Ingen af de nuværende geometri-niveauer (facade/fundering/tag) siger
+      // noget om installationsomfang, så denne kategori forbliver "antaget",
+      // indtil den bliver overstyret manuelt eller der tilføjes et niveau
+      // specifikt for installationer/ventilationsbehov.
+      return { qty: g.heatedArea, refined:false };
+    }
+    return { qty:0, refined:false };
+  }
+
+  // ================= ROW COMPUTATION =================
+
+  function computeStandardRow(meta, g){
+    const rowState = standardRows[meta.key];
+    const mat = MATERIALS.find(m => m.id === rowState.materialId) || MATERIALS[0];
+    let qty, tier;
+    if(rowState.mode === 'manual'){
+      qty = rowState.manualQty || 0;
+      tier = 'manual';
+    } else {
+      const est = computeCategoryEstimate(meta.key, g);
+      qty = est.qty;
+      tier = est.refined ? 'refined' : 'assumed';
+    }
+    return { key:meta.key, label:meta.label, unit:mat.unit, materialId:mat.id, qty, gwp:mat.gwp, impact: qty*mat.gwp, tier, mode:rowState.mode, isCustom:false };
+  }
+
+  function computeCustomRow(r){
+    const mat = MATERIALS.find(m => m.id === r.materialId) || MATERIALS[0];
+    const qty = r.qty || 0;
+    return { key:r.rowId, label:r.element || mat.name, unit:mat.unit, materialId:mat.id, qty, gwp:mat.gwp, impact: qty*mat.gwp, tier:'manual', mode:'manual', isCustom:true };
+  }
+
+  function getAllComputedRows(g){
+    return CATEGORY_META.map(meta => computeStandardRow(meta, g)).concat(customRows.map(computeCustomRow));
+  }
+
+  // ================= RENDER: LEFT PANEL LEVEL BADGES =================
+
+  function setLevelBadge(id, filled){
+    const el = document.getElementById(id);
+    el.textContent = filled ? 'Udfyldt' : 'Antaget';
+    el.className = 'level-badge ' + (filled ? 'filled' : 'empty');
+  }
+
+  function updateLevelBadges(){
+    const g = readGeometry();
+    setLevelBadge('level1Badge', floorsSplit(g));
+    setLevelBadge('level2Badge', getFacadeArea(g).refined);
+    setLevelBadge('level3Badge', g.foundationType !== '' || g.foundationLength !== '');
+    setLevelBadge('level4Badge', g.roofType !== '' || g.roofAreaOverride !== '');
+    setLevelBadge('principleBadge', g.constructionPrinciple !== '');
+  }
+
+  // Shows the value the engine currently assumes for each optional field,
+  // as grey placeholder text — visible only while the field itself is left
+  // blank, and replaced by a real (black) number the moment someone types.
+  // Flags the case where "Etager i alt" no longer agrees with the more
+  // specific Niveau 1 split (over jord + under jord) — e.g. the user
+  // refined the split but the top-level total was never updated to match.
+  // Catches a real, recurring data-entry trap: Danish convention writes large
+  // numbers with a period as thousands separator ("1.078 m²" = 1078), but a
+  // plain number field always reads period as a decimal point, so typing
+  // "1.078" silently becomes ~1 m² instead of 1078 m². Footprint-driven
+  // categories then hit the Math.max(...,1) safety floor and produce small
+  // but plausible-looking numbers rather than an obvious zero — which is
+  // exactly what makes this mistake hard to spot from the results alone.
+  function checkHeatedAreaSanity(g){
+    const input = document.getElementById('heatedArea');
+    const warningEl = document.getElementById('heatedAreaWarning');
+    const raw = input.value;
+
+    // § in BR25 itself uses 50 m² as the rough floor for when climate
+    // documentation is required at all — a real project is essentially
+    // never smaller than that, so it doubles as a sane trigger threshold.
+    if(raw === '' || g.heatedArea >= 50){
+      input.classList.remove('field-error');
+      warningEl.style.display = 'none';
+      return;
+    }
+
+    input.classList.add('field-error');
+    warningEl.style.display = 'flex';
+
+    const looksLikeThousandsSeparator = /^\d+\.\d{3}$/.test(raw);
+    if(looksLikeThousandsSeparator){
+      const suggested = Math.round(parseFloat(raw) * 1000);
+      warningEl.querySelector('.discrepancy-text').textContent =
+        `${raw} m² er usædvanligt lille til en rigtig bygning — mente du ${suggested} (punktum brugt som tusindtalsseparator)?`;
+      const btn = warningEl.querySelector('.discrepancy-btn');
+      btn.textContent = `Ret til ${suggested}`;
+      btn.onclick = () => {
+        document.getElementById('heatedArea').value = suggested;
+        renderWorksheet();
+      };
+    } else {
+      warningEl.querySelector('.discrepancy-text').textContent =
+        `${raw} m² er usædvanligt lille til en rigtig bygning — tjek om arealet er tastet korrekt.`;
+      warningEl.querySelector('.discrepancy-btn').textContent = '';
+      warningEl.querySelector('.discrepancy-btn').onclick = null;
+    }
+  }
+
+  function checkFloorsDiscrepancy(g){
+    const floorsInput = document.getElementById('floors');
+    const warningEl = document.getElementById('floorsDiscrepancyWarning');
+
+    if(!floorsSplit(g)){
+      floorsInput.classList.remove('field-error');
+      warningEl.style.display = 'none';
+      return;
+    }
+
+    const above = g.floorsAboveGrade !== '' ? parseFloat(g.floorsAboveGrade) : g.floorsTotal;
+    const below = g.floorsBelowGrade !== '' ? parseFloat(g.floorsBelowGrade) : 0;
+    const sum = above + below;
+
+    if(sum !== g.floorsTotal){
+      floorsInput.classList.add('field-error');
+      warningEl.style.display = 'flex';
+      warningEl.querySelector('.discrepancy-text').textContent =
+        `Over jord (${above}) + under jord (${below}) = ${sum}, men "Etager i alt" står til ${g.floorsTotal}.`;
+      const btn = warningEl.querySelector('.discrepancy-btn');
+      btn.textContent = `Opdatér til ${sum}`;
+      btn.onclick = () => {
+        document.getElementById('floors').value = sum;
+        renderWorksheet();
+      };
+    } else {
+      floorsInput.classList.remove('field-error');
+      warningEl.style.display = 'none';
+    }
+  }
+
+  // Flags the case where a stated "Facadeareal" no longer agrees with
+  // længde × højde — since those are now the prioritized source (easier to
+  // pull from a project than a single area figure), the commit direction
+  // goes the other way from the floors check: it corrects the area field.
+  function checkFacadeDiscrepancy(g){
+    const areaInput = document.getElementById('facadeAreaOverride');
+    const warningEl = document.getElementById('facadeDiscrepancyWarning');
+
+    const hasArea = g.facadeAreaOverride !== '' && !isNaN(parseFloat(g.facadeAreaOverride));
+    const hasLengthHeight = g.facadeLength !== '' && g.facadeHeight !== '' && !isNaN(parseFloat(g.facadeLength)) && !isNaN(parseFloat(g.facadeHeight));
+
+    if(!hasArea || !hasLengthHeight){
+      areaInput.classList.remove('field-error');
+      warningEl.style.display = 'none';
+      return;
+    }
+
+    const computed = Math.round(parseFloat(g.facadeLength) * parseFloat(g.facadeHeight) * 10) / 10;
+    const stated = parseFloat(g.facadeAreaOverride);
+
+    if(computed !== stated){
+      areaInput.classList.add('field-error');
+      warningEl.style.display = 'flex';
+      warningEl.querySelector('.discrepancy-text').textContent =
+        `Længde (${g.facadeLength} m) × højde (${g.facadeHeight} m) = ${formatNum(computed,1).replace('.',',')} m², men "Facadeareal" står til ${formatNum(stated,1).replace('.',',')} m².`;
+      const btn = warningEl.querySelector('.discrepancy-btn');
+      btn.textContent = `Opdatér til ${formatNum(computed,1).replace('.',',')}`;
+      btn.onclick = () => {
+        document.getElementById('facadeAreaOverride').value = computed;
+        renderWorksheet();
+      };
+    } else {
+      areaInput.classList.remove('field-error');
+      warningEl.style.display = 'none';
+    }
+  }
+
+  function updateAssumedPlaceholders(){
+    const g = readGeometry();
+    const footprint = getFootprint(g);
+    const perimeterDefault = 4 * Math.sqrt(footprint);
+    const floorsAboveForHeight = g.floorsAboveGrade !== '' ? parseFloat(g.floorsAboveGrade) : g.floorsTotal;
+
+    document.getElementById('floorsAboveGrade').placeholder = String(Math.round(g.floorsTotal));
+    document.getElementById('floorsBelowGrade').placeholder = '0';
+    document.getElementById('facadeAreaOverride').placeholder = String(Math.round(getFacadeArea(g).area));
+    document.getElementById('facadeLength').placeholder = String(Math.round(perimeterDefault));
+    document.getElementById('facadeHeight').placeholder = String(Math.round(floorsAboveForHeight * DEFAULT_STOREY_HEIGHT));
+
+    // "Equivalent" length/area a reader can compare their own known figure
+    // against — derived by inverting the current footprint-based assumption.
+    const coeff = FOUNDATION_COEFF[g.foundationType] !== undefined ? FOUNDATION_COEFF[g.foundationType] : FOUNDATION_COEFF[''];
+    const equivalentFoundationLength = (footprint * coeff) / FOUNDATION_LINEAR_DENSITY;
+    document.getElementById('foundationLength').placeholder = String(Math.round(equivalentFoundationLength));
+
+    const roofFactor = ROOF_FACTOR[g.roofType] !== undefined ? ROOF_FACTOR[g.roofType] : ROOF_FACTOR[''];
+    document.getElementById('roofAreaOverride').placeholder = String(Math.round(footprint * roofFactor));
+  }
+
+  // ================= RENDER: WORKSHEET TABLE =================
+
+  function renderWorksheet(){
+    const g = readGeometry();
+    const computedRows = getAllComputedRows(g);
+    const materialRowsEl = document.getElementById('materialRows');
+
+    const standardHtml = computedRows.filter(r => !r.isCustom).map(r => {
+      const rowState = standardRows[r.key];
+      const meta = CATEGORY_META.find(c => c.key === r.key);
+      const selectHtml = rowState.mode === 'auto' ? materialOptionsFiltered(r.key, meta.unit, r.materialId) : materialOptions(r.materialId);
+      const qtyCell = rowState.mode === 'auto'
+        ? `<span class="auto-qty">${formatNum(r.qty,0)}</span>`
+        : `<input type="number" min="0" step="any" value="${r.qty}" data-field="manualQty" data-cat="${r.key}">`;
+      return `
+        <tr data-cat="${r.key}">
+          <td class="col-name">
+            <div class="cat-label">${r.label}</div>
+            <select data-field="materialId" data-cat="${r.key}">${selectHtml}</select>
+          </td>
+          <td class="col-qty">${qtyCell}</td>
+          <td class="col-unit">${r.unit}</td>
+          <td class="col-factor">${r.gwp.toFixed(2)}</td>
+          <td class="col-result">${formatNum(r.impact,0)}</td>
+          <td class="col-prec"><span class="prec-badge ${r.tier}">${tierLabelText(r.tier)}</span></td>
+          <td class="col-action">
+            <button class="row-action-btn" data-action="${rowState.mode === 'auto' ? 'toManual' : 'toAuto'}" data-cat="${r.key}">
+              ${rowState.mode === 'auto' ? 'Rediger' : 'Nulstil'}
+            </button>
+          </td>
+        </tr>`;
+    }).join('');
+
+    const customHtml = computedRows.filter(r => r.isCustom).map(r => {
+      const c = customRows.find(cr => cr.rowId === r.key);
+      return `
+        <tr data-row="${r.key}">
+          <td class="col-name">
+            <input type="text" placeholder="Bygningsdel…" value="${escapeHtml(c.element)}" data-field="element" data-row="${r.key}">
+            <select data-field="materialId" data-row="${r.key}" style="margin-top:5px;">${materialOptions(r.materialId)}</select>
+          </td>
+          <td class="col-qty"><input type="number" min="0" step="any" value="${r.qty}" data-field="qty" data-row="${r.key}"></td>
+          <td class="col-unit">${r.unit}</td>
+          <td class="col-factor">${r.gwp.toFixed(2)}</td>
+          <td class="col-result">${formatNum(r.impact,0)}</td>
+          <td class="col-prec"><span class="prec-badge manual">Manuel</span></td>
+          <td class="col-action"><button class="row-del-btn" data-action="delCustom" data-row="${r.key}">&times;</button></td>
+        </tr>`;
+    }).join('');
+
+    materialRowsEl.innerHTML = standardHtml + customHtml;
+    document.getElementById('rowCount').textContent = CATEGORY_META.length + ' kategorier · ' + customRows.length + ' ekstra';
+
+    // standard row events
+    materialRowsEl.querySelectorAll('tr[data-cat]').forEach(tr => {
+      const key = tr.getAttribute('data-cat');
+      const matSelect = tr.querySelector('[data-field="materialId"]');
+      if(matSelect) matSelect.addEventListener('change', () => {
+        standardRows[key].materialId = matSelect.value;
+        renderWorksheet();
+      });
+      const qtyInput = tr.querySelector('[data-field="manualQty"]');
+      if(qtyInput) qtyInput.addEventListener('input', () => {
+        standardRows[key].manualQty = parseFloat(qtyInput.value) || 0;
+        renderWorksheet();
+      });
+      const actionBtn = tr.querySelector('.row-action-btn');
+      actionBtn.addEventListener('click', () => {
+        if(standardRows[key].mode === 'auto'){
+          const est = computeCategoryEstimate(key, readGeometry());
+          standardRows[key].manualQty = est.qty;
+          standardRows[key].mode = 'manual';
+        } else {
+          standardRows[key].mode = 'auto';
+        }
+        renderWorksheet();
+      });
+    });
+
+    // custom row events
+    materialRowsEl.querySelectorAll('tr[data-row]').forEach(tr => {
+      const rowId = tr.getAttribute('data-row');
+      tr.querySelectorAll('[data-field]').forEach(input => {
+        input.addEventListener('input', () => {
+          const row = customRows.find(r => r.rowId === rowId);
+          const field = input.getAttribute('data-field');
+          row[field] = field === 'qty' ? (parseFloat(input.value) || 0) : input.value;
+          renderWorksheet();
+        });
+      });
+      const del = tr.querySelector('[data-action="delCustom"]');
+      if(del) del.addEventListener('click', () => {
+        customRows = customRows.filter(r => r.rowId !== rowId);
+        renderWorksheet();
+      });
+    });
+
+    updateLevelBadges();
+    updateAssumedPlaceholders();
+    checkHeatedAreaSanity(g);
+    checkFloorsDiscrepancy(g);
+    checkFacadeDiscrepancy(g);
+    recalc();
+  }
+
+  // ================= CORE CALCULATION =================
+
+  function recalc(){
+    const g = readGeometry();
+    const computedRows = getAllComputedRows(g);
+    const a1a3 = computedRows.reduce((s, r) => s + r.impact, 0);
+
+    document.getElementById('a1a3Total').textContent = formatNum(a1a3, 0);
+    renderPrecisionGauge(computedRows);
+    updateModuleBadges();
+
+    const area = Math.max(g.heatedArea, 1);
+    const a4a5pct = parseFloat(document.getElementById('a4a5pct').value) || 0;
+    const b4pct   = parseFloat(document.getElementById('b4pct').value) || 0;
+    const c3c4pct = parseFloat(document.getElementById('c3c4pct').value) || 0;
+    const biogenicPct = parseFloat(document.getElementById('biogenicGivebackPct').value) || 0;
+    const b6kwh   = parseFloat(document.getElementById('b6kwh').value) || 0;
+    const b6f     = parseFloat(document.getElementById('b6factor').value) || 0;
+
+    // A flat "% of A1-A3" breaks down the moment a category has NEGATIVE
+    // A1-A3 (biogenic carbon storage, typically timber/CLT): the sign alone
+    // would shrink or invert A4-A5/B4/C3-C4 for exactly the categories that
+    // still involve real transport, replacement, and — critically — a real
+    // future release of that stored carbon at end-of-life. So the modules
+    // are split across three bases instead of one:
+    //  - positiveA1A3: conventional (non-biogenic) categories only
+    //  - negativeA1A3: biogenic-credit categories only (stored carbon)
+    //  - absoluteA1A3: |impact| summed across everything — a better proxy
+    //    for "how much material/activity is actually here" than the signed
+    //    total, which can hide a large biogenic mass behind a small or
+    //    negative number.
+    let positiveA1A3 = 0, negativeA1A3 = 0, absoluteA1A3 = 0;
+    computedRows.forEach(r => {
+      if(r.impact >= 0) positiveA1A3 += r.impact; else negativeA1A3 += r.impact;
+      absoluteA1A3 += Math.abs(r.impact);
+    });
+
+    const a4a5 = absoluteA1A3 * (a4a5pct/100);
+    const b4   = absoluteA1A3 * (b4pct/100);
+    const c3c4Conventional = positiveA1A3 * (c3c4pct/100);
+    const c3c4Biogenic = (-negativeA1A3) * (biogenicPct/100);
+    const c3c4 = c3c4Conventional + c3c4Biogenic;
+
+    // § 298, stk. 1 scopes the MAIN limit to A1-A3 + B4 + B6 + C3-C4 only.
+    // A4-A5 (byggeprocessen) has its own separate limit under stk. 5 and must
+    // NOT also be folded into the main total — doing so double-counts it
+    // against two different legal thresholds at once.
+    const embodiedTotal = a1a3 + b4 + c3c4;
+    const embodiedPerM2PerYear = embodiedTotal / area / RSP;
+    const b6PerM2PerYear = b6kwh * b6f;
+    const totalPerM2PerYear = embodiedPerM2PerYear + b6PerM2PerYear;
+
+    const modules = [
+      { key:'A1-A3', label:'A1–A3 Produktion',            value:(a1a3/area/RSP),  color:'#4C6B63' },
+      { key:'B4',    label:'B4 Udskiftninger',             value:(b4/area/RSP),    color:'#B98A2E' },
+      { key:'B6',    label:'B6 Energi i drift',             value: b6PerM2PerYear, color:'#8A9A45' },
+      { key:'C3-C4', label:'C3–C4 Bortskaffelse',           value:(c3c4/area/RSP),  color:'#A8462E' },
+    ];
+
+    const threshold = getMainThreshold(currentStandard, g.buildingType, area);
+    const a4a5Threshold = getA4A5Threshold(currentStandard);
+    const a4a5PerM2PerYear = a4a5 / area / RSP;
+
+    renderResults(totalPerM2PerYear, modules, { a1a3, a4a5, b4, c3c4, c3c4Conventional, c3c4Biogenic, embodiedTotal, area, RSP, embodiedPerM2PerYear, b6PerM2PerYear }, threshold, a4a5PerM2PerYear, a4a5Threshold);
+    scheduleAutosave();
+  }
+
+  // Viser om hvert modulfelt stadig matcher værktøjets aktuelle standard
+  // ("Antaget") eller er blevet ændret — manuelt eller via en ældre
+  // gemt/importeret fil, hvis standardværdier siden er opdateret ("Manuel").
+  // Nulstil-knappen vises kun, når feltet reelt afviger.
+  function updateModuleBadges(){
+    function setStatus(badgeId, resetSelector, isDefault){
+      const badge = document.getElementById(badgeId);
+      badge.textContent = isDefault ? 'Antaget' : 'Manuel';
+      badge.className = 'prec-badge ' + (isDefault ? 'assumed' : 'manual');
+      document.querySelectorAll(resetSelector).forEach(btn => {
+        btn.style.display = isDefault ? 'none' : 'inline-block';
+      });
+    }
+
+    const a4a5Val = parseFloat(document.getElementById('a4a5pct').value);
+    setStatus('a4a5Status', '[data-module="a4a5pct"]', a4a5Val === DEFAULT_MODULE_VALUES.a4a5pct);
+
+    const b4Val = parseFloat(document.getElementById('b4pct').value);
+    setStatus('b4Status', '[data-module="b4pct"]', b4Val === DEFAULT_MODULE_VALUES.b4pct);
+
+    const c3c4Val = parseFloat(document.getElementById('c3c4pct').value);
+    setStatus('c3c4Status', '[data-module="c3c4pct"]', c3c4Val === DEFAULT_MODULE_VALUES.c3c4pct);
+
+    const biogenicVal = parseFloat(document.getElementById('biogenicGivebackPct').value);
+    setStatus('biogenicStatus', '[data-module="biogenicGivebackPct"]', biogenicVal === DEFAULT_MODULE_VALUES.biogenicGivebackPct);
+
+    const b6kwhVal = parseFloat(document.getElementById('b6kwh').value);
+    const b6factorVal = parseFloat(document.getElementById('b6factor').value);
+    const expectedB6Kwh = getDefaultB6Kwh(readGeometry());
+    const b6IsDefault = Math.abs(b6kwhVal - expectedB6Kwh) < 0.1 && b6factorVal === DEFAULT_MODULE_VALUES.b6factor;
+    setStatus('b6Status', '[data-module="b6"]', b6IsDefault);
+  }
+
+  document.querySelectorAll('.module-reset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.getAttribute('data-module');
+      if(key === 'b6'){
+        document.getElementById('b6kwh').value = Math.round(getDefaultB6Kwh(readGeometry()) * 10) / 10;
+        document.getElementById('b6factor').value = DEFAULT_MODULE_VALUES.b6factor;
+      } else {
+        document.getElementById(key).value = DEFAULT_MODULE_VALUES[key];
+      }
+      recalc();
+    });
+  });
+
+  function renderPrecisionGauge(computedRows){
+    const weights = { assumed:0.2, refined:0.6, manual:1.0 };
+    const tierColor = { assumed:'#B98A2E', refined:'#5C7A8A', manual:'#374F49' };
+    let impactSum = 0, weightedSum = 0;
+    const tierImpacts = { assumed:0, refined:0, manual:0 };
+    computedRows.forEach(r => {
+      impactSum += r.impact;
+      weightedSum += r.impact * weights[r.tier];
+      tierImpacts[r.tier] += r.impact;
+    });
+    const pct = impactSum > 0 ? Math.round(weightedSum / impactSum * 100) : 20;
+
+    const scoreEl = document.getElementById('precisionScore');
+    scoreEl.textContent = pct + '%';
+    scoreEl.style.color = pct >= 70 ? 'var(--patina-dark)' : (pct >= 40 ? '#7A5A18' : 'var(--brick)');
+
+    document.getElementById('precisionBar').innerHTML = ['assumed','refined','manual'].map(tier => {
+      const widthPct = impactSum > 0 ? (tierImpacts[tier] / impactSum * 100) : (tier === 'assumed' ? 100 : 0);
+      return `<div class="seg" style="width:${widthPct}%;background:${tierColor[tier]}"></div>`;
+    }).join('');
+
+    document.getElementById('precisionLegend').innerHTML = ['assumed','refined','manual'].map(tier => {
+      const sharePct = impactSum > 0 ? Math.round(tierImpacts[tier] / impactSum * 100) : (tier === 'assumed' ? 100 : 0);
+      return `<span class="item"><span class="dot" style="background:${tierColor[tier]}"></span>${tierLabelText(tier)} · ${sharePct}%</span>`;
+    }).join('');
+  }
+
+  function renderResults(total, modules, trail, threshold, a4a5PerM2PerYear, a4a5Threshold){
+    document.getElementById('resultFigure').textContent = formatNum(total, 1).replace('.', ',');
+    document.getElementById('thresholdLine').setAttribute('data-label', formatNum(threshold,1).replace('.',','));
+
+    // § 298, stk. 6: der afrundes til én decimal FØR det vurderes, om
+    // grænseværdien er overholdt — ikke bare ved visning bagefter.
+    const roundedTotal = Math.round(total * 10) / 10;
+
+    const badge = document.getElementById('resultBadge');
+    const ratio = roundedTotal / threshold;
+    badge.classList.remove('pass','warn','fail');
+    if(ratio <= 0.85){ badge.classList.add('pass'); badge.textContent = 'under grænseværdi (' + formatNum(threshold,1).replace('.',',') + ')'; }
+    else if(ratio <= 1.0){ badge.classList.add('warn'); badge.textContent = 'tæt på grænseværdi (' + formatNum(threshold,1).replace('.',',') + ')'; }
+    else { badge.classList.add('fail'); badge.textContent = 'over grænseværdi (' + formatNum(threshold,1).replace('.',',') + ')'; }
+
+    const a4a5Row = document.getElementById('a4a5BadgeRow');
+    const a4a5Badge = document.getElementById('a4a5Badge');
+    if(a4a5Threshold === null){
+      a4a5Row.style.display = 'none';
+    } else {
+      a4a5Row.style.display = 'flex';
+      a4a5Badge.classList.remove('pass','warn','fail');
+      const roundedA4A5 = Math.round(a4a5PerM2PerYear * 10) / 10;
+      const a4a5Ratio = roundedA4A5 / a4a5Threshold;
+      const a4a5Text = formatNum(a4a5PerM2PerYear,2).replace('.',',') + ' / ' + formatNum(a4a5Threshold,1).replace('.',',') + ' kg/m²/år';
+      if(a4a5Ratio <= 0.85){ a4a5Badge.classList.add('pass'); a4a5Badge.textContent = a4a5Text; }
+      else if(a4a5Ratio <= 1.0){ a4a5Badge.classList.add('warn'); a4a5Badge.textContent = a4a5Text; }
+      else { a4a5Badge.classList.add('fail'); a4a5Badge.textContent = a4a5Text; }
+    }
+
+    const scaleMax = Math.max(total, threshold) * 1.15 || 1;
+    const bar = document.getElementById('carbonBar');
+    bar.querySelectorAll('.seg').forEach(el => el.remove());
+    modules.forEach(m => {
+      const seg = document.createElement('div');
+      seg.className = 'seg';
+      seg.style.width = Math.max((m.value / scaleMax) * 100, 0) + '%';
+      seg.style.background = m.color;
+      bar.insertBefore(seg, document.getElementById('thresholdLine'));
+    });
+    document.getElementById('thresholdLine').style.left = (threshold / scaleMax) * 100 + '%';
+
+    document.getElementById('barLegend').innerHTML = modules.map(m =>
+      `<span class="item"><span class="dot" style="background:${m.color}"></span>${m.label}</span>`
+    ).join('');
+
+    const biogenicNote = Math.abs(trail.c3c4Biogenic) > 1
+      ? ` (heraf ${formatNum(trail.c3c4Conventional,0)} konventionel + ${formatNum(trail.c3c4Biogenic,0)} biogen tilbagebetaling)`
+      : '';
+    document.getElementById('calcTrail').innerHTML = `
+      <span class="step">${formatNum(trail.a1a3,0)} kg CO₂e <span class="op">(A1&ndash;A3, hele bygningen)</span></span>
+      <span class="step"><span class="op">+</span> ${formatNum(trail.b4,0)} (B4) <span class="op">+</span> ${formatNum(trail.c3c4,0)} (C3&ndash;C4)${biogenicNote} <span class="op">(A4&ndash;A5 holdes udenfor — egen grænseværdi, se badge ovenfor)</span></span>
+      <span class="step"><span class="op">=</span> <span class="val">${formatNum(trail.embodiedTotal,0)} kg CO₂e</span> <span class="op">(indlejret i alt, jf. §298 stk. 1)</span></span>
+      <span class="step"><span class="op">÷</span> ${formatNum(trail.area,0)} m² <span class="op">÷</span> ${trail.RSP} år <span class="op">=</span> <span class="val">${formatNum(trail.embodiedPerM2PerYear,2).replace('.',',')} kg/m²/år</span> <span class="op">(indlejret)</span></span>
+      <span class="step"><span class="op">+</span> <span class="val">${formatNum(trail.b6PerM2PerYear,2).replace('.',',')} kg/m²/år</span> <span class="op">(B6, drift — allerede årlig)</span></span>
+      <span class="step result"><span class="op">=</span> <span class="val">${formatNum(total,2).replace('.',',')} kg CO₂e/m²/år</span> <span class="op">(sammenlignes med hovedgrænseværdien)</span></span>
+    `;
+
+    document.getElementById('moduleBreakdownRows').innerHTML = modules.map(m => `
+      <div class="mb-row"><span class="mb-name">${m.label}</span><span class="mb-val">${formatNum(m.value,2).replace('.',',')} kg/m²/år</span></div>
+    `).join('') + `
+      <div class="mb-row" style="border-top:1.5px solid var(--charcoal);margin-top:4px;padding-top:9px;">
+        <span class="mb-name" style="color:var(--charcoal);font-weight:600;">I alt</span>
+        <span class="mb-val">${formatNum(total,2).replace('.',',')} kg/m²/år</span>
+      </div>
+    `;
+  }
+
+  // ================= STANDARD SELECTOR & MODULE INPUTS =================
+
+  document.querySelectorAll('#standardGroup .radio-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      document.querySelectorAll('#standardGroup .radio-option').forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      opt.querySelector('input').checked = true;
+      currentStandard = opt.getAttribute('data-value');
+      recalc();
+    });
+  });
+
+  ['a4a5pct','b4pct','b6kwh','b6factor','c3c4pct','biogenicGivebackPct'].forEach(id => {
+    document.getElementById(id).addEventListener('input', recalc);
+  });
+
+  ['heatedArea','floors','floorsAboveGrade','floorsBelowGrade','facadeAreaOverride','facadeLength','facadeHeight','foundationType','foundationLength','roofType','roofAreaOverride'].forEach(id => {
+    document.getElementById(id).addEventListener('input', renderWorksheet);
+  });
+
+  // Bygningstype styrer "Bærende system" automatisk, indtil personen selv
+  // ændrer feltet — herefter respekteres det manuelle valg, uanset senere
+  // ændringer af bygningstype.
+  let constructionPrincipleTouched = false;
+  let b6Touched = false;
+
+  document.getElementById('buildingType').addEventListener('change', () => {
+    const newType = document.getElementById('buildingType').value;
+    const defaults = defaultMaterialForCategory(newType);
+    CATEGORY_META.forEach(meta => {
+      if(standardRows[meta.key].mode === 'auto') standardRows[meta.key].materialId = defaults[meta.key];
+    });
+    if(!constructionPrincipleTouched){
+      document.getElementById('constructionPrinciple').value = CONSTRUCTION_PRINCIPLE_BY_TYPE[newType] || '';
+    }
+    if(!b6Touched){
+      document.getElementById('b6kwh').value = Math.round(getDefaultB6Kwh(readGeometry()) * 10) / 10;
+    }
+    renderWorksheet();
+  });
+
+  document.getElementById('constructionPrinciple').addEventListener('change', () => {
+    constructionPrincipleTouched = true;
+    renderWorksheet();
+  });
+
+  document.getElementById('heatedArea').addEventListener('input', () => {
+    if(!b6Touched){
+      document.getElementById('b6kwh').value = Math.round(getDefaultB6Kwh(readGeometry()) * 10) / 10;
+      recalc();
+    }
+  });
+
+  document.getElementById('b6kwh').addEventListener('input', () => { b6Touched = true; });
+
+  document.getElementById('addRowBtn').addEventListener('click', () => {
+    customRows.push({ rowId: 'r' + (rowIdSeq++), element:'', materialId: MATERIALS[0].id, qty: 0 });
+    renderWorksheet();
+  });
+
+  // ================= STATE SERIALIZATION =================
+
+  function getState(){
+    return {
+      projectName: document.getElementById('projectName').value,
+      buildingType: document.getElementById('buildingType').value,
+      constructionPrinciple: document.getElementById('constructionPrinciple').value,
+      heatedArea: document.getElementById('heatedArea').value,
+      floors: document.getElementById('floors').value,
+      floorsAboveGrade: document.getElementById('floorsAboveGrade').value,
+      floorsBelowGrade: document.getElementById('floorsBelowGrade').value,
+      facadeAreaOverride: document.getElementById('facadeAreaOverride').value,
+      facadeLength: document.getElementById('facadeLength').value,
+      facadeHeight: document.getElementById('facadeHeight').value,
+      foundationType: document.getElementById('foundationType').value,
+      foundationLength: document.getElementById('foundationLength').value,
+      roofType: document.getElementById('roofType').value,
+      roofAreaOverride: document.getElementById('roofAreaOverride').value,
+      standard: currentStandard,
+      a4a5pct: document.getElementById('a4a5pct').value,
+      b4pct: document.getElementById('b4pct').value,
+      b6kwh: document.getElementById('b6kwh').value,
+      b6factor: document.getElementById('b6factor').value,
+      c3c4pct: document.getElementById('c3c4pct').value,
+      biogenicGivebackPct: document.getElementById('biogenicGivebackPct').value,
+      customMaterials: MATERIALS.filter(m => m.custom),
+      standardRows: JSON.parse(JSON.stringify(standardRows)),
+      customRows: customRows.map(r => ({ element:r.element, materialId:r.materialId, qty:r.qty }))
+    };
+  }
+
+  function applyState(state){
+    if(!state) return;
+    (state.customMaterials || []).forEach(cm => { if(!MATERIALS.find(m => m.id === cm.id)) MATERIALS.push(cm); });
+
+    document.getElementById('projectName').value = state.projectName || '';
+    document.getElementById('buildingType').value = state.buildingType || 'parcelhus';
+    document.getElementById('constructionPrinciple').value = state.constructionPrinciple || '';
+    if(state.constructionPrinciple){ constructionPrincipleTouched = true; }
+    document.getElementById('heatedArea').value = state.heatedArea || 150;
+    document.getElementById('floors').value = state.floors || 1;
+    document.getElementById('floorsAboveGrade').value = state.floorsAboveGrade || '';
+    document.getElementById('floorsBelowGrade').value = state.floorsBelowGrade || '';
+    document.getElementById('facadeAreaOverride').value = state.facadeAreaOverride || '';
+    document.getElementById('facadeLength').value = state.facadeLength || '';
+    document.getElementById('facadeHeight').value = state.facadeHeight || '';
+    document.getElementById('foundationType').value = state.foundationType || '';
+    document.getElementById('foundationLength').value = state.foundationLength || '';
+    document.getElementById('roofType').value = state.roofType || '';
+    document.getElementById('roofAreaOverride').value = state.roofAreaOverride || '';
+    document.getElementById('a4a5pct').value = state.a4a5pct !== undefined ? state.a4a5pct : 25;
+    document.getElementById('b4pct').value = state.b4pct !== undefined ? state.b4pct : 45;
+    document.getElementById('b6kwh').value = state.b6kwh !== undefined ? state.b6kwh : Math.round(getDefaultB6Kwh(readGeometry()) * 10) / 10;
+    if(state.b6kwh !== undefined){ b6Touched = true; }
+    document.getElementById('b6factor').value = state.b6factor !== undefined ? state.b6factor : 0.05;
+    document.getElementById('c3c4pct').value = state.c3c4pct !== undefined ? state.c3c4pct : 30;
+    document.getElementById('biogenicGivebackPct').value = state.biogenicGivebackPct !== undefined ? state.biogenicGivebackPct : 100;
+
+    const std = state.standard || 'br18';
+    currentStandard = std;
+    document.querySelectorAll('#standardGroup .radio-option').forEach(o => {
+      const active = o.getAttribute('data-value') === std;
+      o.classList.toggle('active', active);
+      o.querySelector('input').checked = active;
+    });
+
+    if(state.standardRows){
+      CATEGORY_META.forEach(meta => { if(state.standardRows[meta.key]) standardRows[meta.key] = state.standardRows[meta.key]; });
+    }
+    customRows = (state.customRows || []).map(r => ({ rowId: 'r' + (rowIdSeq++), element:r.element, materialId:r.materialId, qty:r.qty }));
+
+    renderWorksheet();
+  }
+
+  // ================= AUTOSAVE (localStorage, this browser only) =================
+
+  const AUTOSAVE_KEY = 'lca-screening-autosave-v2';
+  const SNAPSHOTS_KEY = 'lca-screening-snapshots-v2';
+  let autosaveTimer = null;
+
+  function scheduleAutosave(){
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => {
+      try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(getState())); }
+      catch(e){ /* storage unavailable — fail silently */ }
+    }, 500);
+  }
+  document.getElementById('projectName').addEventListener('input', scheduleAutosave);
+
+  // ================= NAMED SNAPSHOTS =================
+
+  function getSnapshots(){ try{ return JSON.parse(localStorage.getItem(SNAPSHOTS_KEY)) || []; }catch(e){ return []; } }
+  function setSnapshots(list){ try{ localStorage.setItem(SNAPSHOTS_KEY, JSON.stringify(list)); }catch(e){} }
+
+  function renderSnapshotList(){
+    const list = getSnapshots();
+    const el = document.getElementById('snapshotList');
+    if(list.length === 0){
+      el.innerHTML = '<div style="font-size:11.5px;color:var(--charcoal-soft);">Ingen gemte projekter endnu.</div>';
+      return;
+    }
+    el.innerHTML = list.map(s => `
+      <div class="snapshot-item" data-id="${s.id}">
+        <div class="sn-meta">
+          <span class="sn-name">${escapeHtml(s.name)}</span>
+          <span class="sn-date">${new Date(s.date).toLocaleString('da-DK')}</span>
+        </div>
+        <div class="sn-actions">
+          <button class="load-btn" data-action="load">Hent</button>
+          <button class="del-btn" data-action="del">Slet</button>
+        </div>
+      </div>
+    `).join('');
+    el.querySelectorAll('.snapshot-item').forEach(item => {
+      const id = item.getAttribute('data-id');
+      item.querySelector('[data-action="load"]').addEventListener('click', () => {
+        const snap = getSnapshots().find(s => s.id === id);
+        if(snap) applyState(snap.state);
+      });
+      item.querySelector('[data-action="del"]').addEventListener('click', () => {
+        setSnapshots(getSnapshots().filter(s => s.id !== id));
+        renderSnapshotList();
+      });
+    });
+  }
+
+  document.getElementById('saveSnapshotBtn').addEventListener('click', () => {
+    const list = getSnapshots();
+    const name = document.getElementById('projectName').value || 'Uden navn';
+    list.unshift({ id:'s' + Date.now(), name, date:new Date().toISOString(), state:getState() });
+    setSnapshots(list.slice(0, 20));
+    renderSnapshotList();
+  });
+
+  // ================= RESET TO DEFAULTS =================
+  // Nulstiller alt: geometri, bygningstype/bærende system, alle 9 kategoriers
+  // tilstand (tilbage til auto med typedefault-materiale), ekstra rækker,
+  // moduludenkendte felter, importerede/CSV-materialer og selve autosave i
+  // browseren. Gemte navngivne projekter (snapshots) rammes ikke.
+  document.getElementById('resetToDefaultsBtn').addEventListener('click', () => {
+    const ok = confirm('Nulstil hele projektet til standardværdier? Alle indtastede mængder, overstyringer og importerede materialer i det aktuelle projekt går tabt. Gemte navngivne projekter (snapshots) påvirkes ikke. Denne handling kan ikke fortrydes.');
+    if(!ok) return;
+
+    // Fjern importerede/CSV-materialer, behold kun de indbyggede placeholders
+    MATERIALS = MATERIALS.filter(m => !m.custom);
+
+    document.getElementById('projectName').value = 'Uden navn — nybyggeri';
+    document.getElementById('buildingType').value = 'parcelhus';
+    document.getElementById('heatedArea').value = 150;
+    document.getElementById('floors').value = 2;
+    document.getElementById('floorsAboveGrade').value = '';
+    document.getElementById('floorsBelowGrade').value = '';
+    document.getElementById('facadeAreaOverride').value = '';
+    document.getElementById('facadeLength').value = '';
+    document.getElementById('facadeHeight').value = '';
+    document.getElementById('foundationType').value = '';
+    document.getElementById('foundationLength').value = '';
+    document.getElementById('roofType').value = '';
+    document.getElementById('roofAreaOverride').value = '';
+    document.getElementById('constructionPrinciple').value = 'vaeg';
+    constructionPrincipleTouched = false;
+
+    document.getElementById('a4a5pct').value = DEFAULT_MODULE_VALUES.a4a5pct;
+    document.getElementById('b4pct').value = DEFAULT_MODULE_VALUES.b4pct;
+    document.getElementById('c3c4pct').value = DEFAULT_MODULE_VALUES.c3c4pct;
+    document.getElementById('biogenicGivebackPct').value = DEFAULT_MODULE_VALUES.biogenicGivebackPct;
+    document.getElementById('b6factor').value = DEFAULT_MODULE_VALUES.b6factor;
+    document.getElementById('b6kwh').value = Math.round(getDefaultB6Kwh(readGeometry()) * 10) / 10;
+    b6Touched = false;
+
+    currentStandard = 'br25';
+    document.querySelectorAll('#standardGroup .radio-option').forEach(o => {
+      const active = o.getAttribute('data-value') === 'br25';
+      o.classList.toggle('active', active);
+      o.querySelector('input').checked = active;
+    });
+
+    const defaults = defaultMaterialForCategory('parcelhus');
+    CATEGORY_META.forEach(meta => {
+      standardRows[meta.key] = { mode:'auto', materialId: defaults[meta.key], manualQty: 0 };
+    });
+    customRows = [];
+
+    try{ localStorage.removeItem(AUTOSAVE_KEY); }catch(e){}
+
+    renderWorksheet();
+    showStatus('resetStatus', 'Projektet er nulstillet til standardværdier.', 'ok');
+  });
+
+  // ================= CSV MATERIAL IMPORT =================
+
+  document.getElementById('csvImportBtn').addEventListener('click', () => document.getElementById('csvFileInput').click());
+  document.getElementById('csvFileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    Papa.parse(file, {
+      header: true, skipEmptyLines: true,
+      complete: function(results){
+        let added = 0;
+        results.data.forEach(row => {
+          const keys = {};
+          Object.keys(row).forEach(k => { keys[k.toLowerCase().trim()] = row[k]; });
+          const name = keys['name'] || keys['navn'] || keys['produkt'] || keys['material'] || keys['materiale'];
+          const unit = (keys['unit'] || keys['enhed'] || 'kg').toString().trim();
+          const gwpRaw = keys['gwp_a1a3'] || keys['gwp'] || keys['kg co2e'] || keys['gwp-total'] || keys['a1-a3'] || keys['gwp total'];
+          const gwp = parseFloat(String(gwpRaw || '').replace(',', '.'));
+          if(name && !isNaN(gwp)){
+            const id = 'custom-' + String(name).toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40) + '-' + Math.random().toString(36).slice(2,6);
+            MATERIALS.push({ id, name:String(name).trim(), unit: unit || 'kg', gwp, custom:true });
+            added++;
+          }
+        });
+        if(added > 0){
+          showStatus('materialImportStatus', added + ' materiale(r) importeret og tilføjet til rullelisterne.', 'ok');
+          renderWorksheet();
+        } else {
+          showStatus('materialImportStatus', 'Ingen rækker kunne genkendes. Kontrollér at CSV\'en har kolonner for navn og en GWP A1-A3-værdi.', 'error');
+        }
+      },
+      error: function(err){ showStatus('materialImportStatus', 'Kunne ikke læse filen: ' + err.message, 'error'); }
+    });
+    e.target.value = '';
+  });
+
+  // ================= ÖKOBAUDAT LIVE FETCH (best effort) =================
+
+  document.getElementById('okobaudatFetchBtn').addEventListener('click', async () => {
+    showStatus('materialImportStatus', 'Forsøger at hente data fra Ökobaudat…', 'info');
+    const endpoint = 'https://oekobaudat.de/OEKOBAU.DAT/resource/processes?search=true&format=json&pageSize=20';
+    try{
+      const res = await fetch(endpoint);
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const items = data.data || data.processes || data.results || [];
+      let added = 0;
+      items.forEach(item => {
+        const name = item.name || (item.processInformation && item.processInformation.dataSetInformation && item.processInformation.dataSetInformation.name);
+        if(!name) return;
+        const id = 'okobau-' + (item.uuid || Math.random().toString(36).slice(2,8));
+        if(!MATERIALS.find(m => m.id === id)){
+          MATERIALS.push({ id, name:String(name), unit:'kg', gwp:0, custom:true, needsReview:true });
+          added++;
+        }
+      });
+      if(added > 0){
+        showStatus('materialImportStatus', added + ' proces(ser) hentet. GWP-værdier er IKKE udfyldt — markeret "tjek GWP", indtast manuelt.', 'info');
+        renderWorksheet();
+      } else {
+        showStatus('materialImportStatus', 'Ökobaudat svarede, men strukturen blev ikke genkendt. Brug CSV-import i stedet.', 'error');
+      }
+    }catch(err){
+      showStatus('materialImportStatus', 'Kunne ikke hente fra Ökobaudat — sandsynligvis en CORS-begrænsning, da dette er en statisk fil uden server. Brug CSV-import, eller kør værktøjet bag en simpel proxy/backend. (' + err.message + ')', 'error');
+    }
+  });
+
+  // ================= LCAx EXPORT / IMPORT =================
+
+  function buildLCAxExport(){
+    const g = readGeometry();
+    const computedRows = getAllComputedRows(g);
+    return {
+      lcax_version: '0.2-approximate',
+      project: {
+        name: document.getElementById('projectName').value,
+        location: 'DK',
+        building_type: g.buildingType,
+        construction_principle: g.constructionPrinciple || null,
+        heated_floor_area_m2: g.heatedArea,
+        floors_total: g.floorsTotal,
+        floors_above_grade: g.floorsAboveGrade || null,
+        floors_below_grade: g.floorsBelowGrade || null,
+        facade_area_m2: g.facadeAreaOverride || null,
+        facade_length_m: g.facadeLength || null,
+        facade_height_m: g.facadeHeight || null,
+        foundation_type: g.foundationType || null,
+        foundation_length_m: g.foundationLength || null,
+        roof_type: g.roofType || null,
+        roof_area_m2: g.roofAreaOverride || null,
+        reference_study_period_years: 50,
+        regulatory_standard: currentStandard
+      },
+      assemblies: computedRows.map(r => ({
+        id: r.key, name: r.label, quantity: r.qty, unit: r.unit,
+        precision_tier: r.tier, source_mode: r.mode,
+        epd: { id:r.materialId, name:(MATERIALS.find(m=>m.id===r.materialId)||{}).name, declared_unit:r.unit, gwp_a1a3:r.gwp, source:(MATERIALS.find(m=>m.id===r.materialId)||{}).custom ? 'imported' : 'placeholder-illustrative' }
+      })),
+      module_assumptions: {
+        a4_a5_pct_of_a1a3: parseFloat(document.getElementById('a4a5pct').value),
+        b4_pct_of_a1a3: parseFloat(document.getElementById('b4pct').value),
+        b6_kwh_per_m2_year: parseFloat(document.getElementById('b6kwh').value),
+        b6_emission_factor_kgco2e_per_kwh: parseFloat(document.getElementById('b6factor').value),
+        c3_c4_pct_of_a1a3: parseFloat(document.getElementById('c3c4pct').value),
+        biogenic_giveback_pct: parseFloat(document.getElementById('biogenicGivebackPct').value)
+      }
+    };
+  }
+
+  document.getElementById('lcaxExportBtn').addEventListener('click', () => {
+    const payload = buildLCAxExport();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (payload.project.name || 'projekt').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40) + '-lcax.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    showStatus('lcaxStatus', 'Projekt eksporteret som LCAx-inspireret JSON.', 'ok');
+  });
+
+  document.getElementById('lcaxImportBtn').addEventListener('click', () => document.getElementById('lcaxFileInput').click());
+  document.getElementById('lcaxFileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const data = JSON.parse(reader.result);
+        if(data.project && Array.isArray(data.assemblies)){
+          document.getElementById('projectName').value = data.project.name || '';
+          if(data.project.building_type) document.getElementById('buildingType').value = data.project.building_type;
+          document.getElementById('constructionPrinciple').value = data.project.construction_principle || '';
+          if(data.project.heated_floor_area_m2) document.getElementById('heatedArea').value = data.project.heated_floor_area_m2;
+          if(data.project.floors_total) document.getElementById('floors').value = data.project.floors_total;
+          document.getElementById('floorsAboveGrade').value = data.project.floors_above_grade || '';
+          document.getElementById('floorsBelowGrade').value = data.project.floors_below_grade || '';
+          document.getElementById('facadeAreaOverride').value = data.project.facade_area_m2 || '';
+          document.getElementById('facadeLength').value = data.project.facade_length_m || '';
+          document.getElementById('facadeHeight').value = data.project.facade_height_m || '';
+          document.getElementById('foundationType').value = data.project.foundation_type || '';
+          document.getElementById('foundationLength').value = data.project.foundation_length_m || '';
+          document.getElementById('roofType').value = data.project.roof_type || '';
+          document.getElementById('roofAreaOverride').value = data.project.roof_area_m2 || '';
+
+          customRows = [];
+          data.assemblies.forEach(a => {
+            const epd = a.epd || {};
+            let matId = epd.id;
+            if(!MATERIALS.find(m => m.id === matId)){
+              matId = 'custom-' + String(epd.name || a.name || 'importeret').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40) + '-' + Math.random().toString(36).slice(2,6);
+              MATERIALS.push({ id:matId, name: epd.name || a.name, unit: epd.declared_unit || a.unit || 'kg', gwp: epd.gwp_a1a3 || 0, custom:true });
+            }
+            const knownCategory = CATEGORY_META.find(c => c.key === a.id);
+            if(knownCategory){
+              // Honour the file's own source_mode: an assembly marked "auto"
+              // was an assumption, not a real measurement, and should stay
+              // visibly "Antaget"/"Forfinet" (recomputed live from geometry)
+              // rather than being silently frozen as "Manuel" on import.
+              // Only restore auto-mode when the material's unit still fits
+              // the category's expected unit — otherwise the auto-mode
+              // dropdown filter would silently swap it for a different
+              // material, so manual is the safer fallback in that case.
+              const mat = MATERIALS.find(m => m.id === matId);
+              const canRestoreAuto = a.source_mode === 'auto' && mat && mat.unit === knownCategory.unit;
+              standardRows[knownCategory.key] = canRestoreAuto
+                ? { mode:'auto', materialId: matId, manualQty: a.quantity || 0 }
+                : { mode:'manual', materialId: matId, manualQty: a.quantity || 0 };
+            } else {
+              customRows.push({ rowId:'r' + (rowIdSeq++), element:a.name, materialId:matId, qty:a.quantity || 0 });
+            }
+          });
+
+          if(data.module_assumptions){
+            const ma = data.module_assumptions;
+            if(ma.a4_a5_pct_of_a1a3 !== undefined) document.getElementById('a4a5pct').value = ma.a4_a5_pct_of_a1a3;
+            if(ma.b4_pct_of_a1a3 !== undefined) document.getElementById('b4pct').value = ma.b4_pct_of_a1a3;
+            if(ma.b6_kwh_per_m2_year !== undefined) document.getElementById('b6kwh').value = ma.b6_kwh_per_m2_year;
+            if(ma.b6_emission_factor_kgco2e_per_kwh !== undefined) document.getElementById('b6factor').value = ma.b6_emission_factor_kgco2e_per_kwh;
+            if(ma.c3_c4_pct_of_a1a3 !== undefined) document.getElementById('c3c4pct').value = ma.c3_c4_pct_of_a1a3;
+            if(ma.biogenic_giveback_pct !== undefined) document.getElementById('biogenicGivebackPct').value = ma.biogenic_giveback_pct;
+          }
+
+          renderWorksheet();
+          showStatus('lcaxStatus', 'Projekt importeret (' + data.assemblies.length + ' linjer). Kategorier markeret "manuel" i filen er importeret som Manuel; kategorier markeret "auto" vises fortsat som Antaget/Forfinet og genberegnes ud fra geometrien.', 'ok');
+        } else {
+          showStatus('lcaxStatus', 'Filen ligner ikke dette værktøjs LCAx-format. Native LCAbyg-projektfiler kræver den dedikerede lcax-konverter (convertLCAbyg) — ikke understøttet direkte i denne prototype endnu.', 'error');
+        }
+      }catch(err){
+        showStatus('lcaxStatus', 'Kunne ikke læse filen som JSON: ' + err.message, 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  // ================= STARTUP =================
+
+  renderSnapshotList();
+  let restored = false;
+  try{
+    const saved = localStorage.getItem(AUTOSAVE_KEY);
+    if(saved){ applyState(JSON.parse(saved)); restored = true; }
+  }catch(e){ /* ignore corrupt/unavailable storage */ }
+
+  if(!restored){ renderWorksheet(); }
+
+})();
+</script>
+
+</body>
+</html>
