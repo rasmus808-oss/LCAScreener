@@ -367,10 +367,10 @@
 
   optgroup{font-family:var(--sans);font-style:normal;font-weight:600;font-size:11px;color:var(--charcoal-soft);}  .print-only{display:none;}
   @media print{
-    body *{visibility:hidden;}
-    .print-only, .print-only *{visibility:visible;}
+    header.top, .workbench, .io-row, footer.notes{display:none !important;}
+    .app{max-width:none;padding:0;}
     .print-only{
-      display:block;position:absolute;top:0;left:0;width:100%;
+      display:block;
       font-family:var(--sans);color:var(--charcoal);padding:20px;
     }
     .print-only h1{font-family:var(--display);font-size:22px;margin:0 0 4px;}
@@ -673,7 +673,6 @@
       </div>
 
       <div class="context-panel">
-        <h3>Hvor ligger resultatet?</h3>
         <div class="context-bar" id="contextBar">
           <div class="context-pin" id="contextPin"><span class="context-pin-label" id="contextPinLabel">5,8</span></div>
         </div>
@@ -681,7 +680,6 @@
           <span id="contextLabelLow">Lavemission 5,4</span>
           <span id="contextLabelHigh">Grænseværdi 7,5</span>
         </div>
-        <div class="context-equivalence" id="contextEquivalence"></div>
       </div>
 
       <div class="precision-panel">
@@ -1753,12 +1751,6 @@
     document.getElementById('contextPinLabel').textContent = formatNum(total,1).replace('.',',');
     document.getElementById('contextLabelLow').textContent = 'Lavemission ' + formatNum(lowVal,1).replace('.',',');
     document.getElementById('contextLabelHigh').textContent = (currentStandard === 'low' ? 'BR25 ' : 'Grænseværdi ') + formatNum(highVal,1).replace('.',',');
-
-    const lifetimeTotal = total * g.heatedArea * RSP; // kg CO2e, hele bygningen, 50 år (samme scope som hovedgrænseværdien)
-    const km = lifetimeTotal / CAR_KG_CO2E_PER_KM;
-    const years = km / CAR_AVG_KM_PER_YEAR;
-    document.getElementById('contextEquivalence').innerHTML =
-      `Bygningens samlede klimabelastning over 50 år (<strong>${formatNum(lifetimeTotal,0)} kg CO₂e</strong>) svarer groft til <strong>${formatNum(years,0)} års</strong> kørsel i en gennemsnitlig dansk bil (~120 g CO₂e/km, ~16.000 km/år — vejledende sammenligning, ikke en præcis omregning).`;
   }
 
   function buildPrintSummary(total, g, threshold, computedRows, a4a5PerM2PerYear, a4a5Threshold){
@@ -1766,15 +1758,20 @@
     const standardLabel = { br18:'BR18 (2023)', br25:'BR25 (2025)', low:'Lavemissionsklasse' }[currentStandard] || currentStandard;
     const buildingTypeLabel = document.getElementById('buildingType').selectedOptions[0].textContent;
 
-    const rows = computedRows.map(r => `
+    const rows = computedRows.map(r => {
+      const mat = MATERIALS.find(m => m.id === r.materialId);
+      const matName = mat ? mat.name : r.materialId;
+      return `
       <tr>
         <td>${r.label}</td>
+        <td>${matName}</td>
         <td style="text-align:right;">${formatNum(r.qty,0)}</td>
         <td>${r.unit}</td>
         <td style="text-align:right;">${r.gwp.toFixed(2)}</td>
         <td style="text-align:right;font-weight:600;">${formatNum(r.impact,0)}</td>
         <td>${tierLabelText(r.tier)}</td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
 
     document.getElementById('printSummary').innerHTML = `
       <h1>LCAscreener — ${escapeHtml(document.getElementById('projectName').value)}</h1>
@@ -1792,7 +1789,7 @@
 
       <h2>Materialer — A1&ndash;A3 (${formatNum(computedRows.reduce((s,r)=>s+r.impact,0),0)} kg CO₂e i alt)</h2>
       <table>
-        <tr><th>Bygningsdel</th><th style="text-align:right;">Mængde</th><th>Enhed</th><th style="text-align:right;">GWP</th><th style="text-align:right;">kg CO₂e</th><th>Kilde</th></tr>
+        <tr><th>Bygningsdel</th><th>Materiale/konstruktion</th><th style="text-align:right;">Mængde</th><th>Enhed</th><th style="text-align:right;">GWP</th><th style="text-align:right;">kg CO₂e</th><th>Kilde</th></tr>
         ${rows}
       </table>
 
