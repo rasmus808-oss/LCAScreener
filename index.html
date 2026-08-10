@@ -440,7 +440,7 @@
 /* On-screen livscyklusfase-diagrammer i resultatpanelet — samme vandrette
    margin (16px) som module-breakdown, så overskrifterne aligner med
    modul-rækkerne ovenover. */
-.phase-chart-onscreen { margin-top: 20px; padding: 22px 16px 4px; border-top: 1px solid var(--line-soft); }
+.phase-chart-onscreen { margin-top: 20px; padding: 22px 16px 19px; border-top: 1px solid var(--line-soft); }
 .phase-chart-title { font-size: 12px; font-weight: 600; color: var(--charcoal); margin: 0 0 12px; letter-spacing: 0.02em; }
 .phase-chart-block { margin-bottom: 22px; }
 .phase-chart-block:last-child { margin-bottom: 0; }
@@ -951,6 +951,14 @@
     <details class="notes-details">
       <summary>Metode, kalibrering og fuld ændringslog</summary>
       <div class="notes-details-body">
+        <strong>v0.21.5 — Bundmargin i Resultat-panelet rettet (kosmetisk).</strong>
+        <code>.phase-chart-onscreen</code> — den nederste sektion i Resultat-panelet, som rummer
+        de to fase-diagrammer — havde <code>padding-bottom: 4px</code>, så rammen sluttede tæt
+        under sidste diagramkort, mens Bygning-panelet har 31 px fra sidste indhold til rammens
+        bund (<code>.panel-body</code>s 16 px plus sidste felts 14 px margin plus 1 px kant).
+        Bundpadding sat til 19 px, hvilket giver præcis samme 31 px målt i browseren. Rent CSS —
+        ingen ændring i beregninger eller data.
+        <br><br>
         <strong>v0.21.4 — LcaS-mærkatet flyttet fra præfiks til suffiks (kosmetisk).</strong>
         Kildemærkater stod inkonsistent: <code>LCAbyg</code> bagest, <code>LcaS:</code> forrest.
         Alle 35 LcaS-presets følger nu samme opskrift som de øvrige — kildemærkatet sidst efter
@@ -1461,7 +1469,7 @@
 <script>
 (function(){
 
-  const APP_VERSION = '0.21.4';
+  const APP_VERSION = '0.21.5';
 
   // ================= CONSTANTS & PLACEHOLDER DATA =================
   // All numeric coefficients below are illustrative order-of-magnitude
