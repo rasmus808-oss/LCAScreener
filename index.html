@@ -547,6 +547,17 @@
           </select>
         </div>
         <div class="field">
+          <label for="constructionWeight">
+            Konstruktionsvægt
+            <span class="level-badge empty" id="weightBadge" style="margin-left:6px;">Antaget</span>
+          </label>
+          <select id="constructionWeight">
+            <option value="" selected>Tung / standard (beton, stål, tegl)</option>
+            <option value="let">Let (træ · CLT/limtræ)</option>
+          </select>
+          <div class="hint" id="weightHint" style="margin-top:4px;"></div>
+        </div>
+        <div class="field">
           <label for="facadeAreaOverride">Facadeareal (m²)</label>
           <input id="facadeAreaOverride" type="number" min="0" />
         </div>
@@ -694,7 +705,7 @@
             </div>
             <div class="m-desc">Tillæg i % af |A1&ndash;A3| for udskiftelige dele (facade, tag, vinduer, gulv, indervægge …). Fundament, terrændæk, bærende og etagedæk tæller 0 — antages ikke udskiftet i 50 år.</div>
             <div class="module-input-row">
-              <input type="number" id="b4pct" value="45" min="0" max="200" step="1" />
+              <input type="number" id="b4pct" value="29" min="0" max="200" step="1" />
               <button class="row-action-btn module-reset-btn" data-module="b4pct" type="button">Nulstil</button>
             </div>
           </div>
@@ -940,6 +951,274 @@
     <details class="notes-details">
       <summary>Metode, kalibrering og fuld ændringslog</summary>
       <div class="notes-details-body">
+        <strong>v0.21.4 — LcaS-mærkatet flyttet fra præfiks til suffiks (kosmetisk).</strong>
+        Kildemærkater stod inkonsistent: <code>LCAbyg</code> bagest, <code>LcaS:</code> forrest.
+        Alle 35 LcaS-presets følger nu samme opskrift som de øvrige — kildemærkatet sidst efter
+        et <code>·</code>, fx <em>"Gipsplade · ren"</em> → <em>"Gipsplade · ren · LcaS"</em>.
+        Kun <code>name</code>-feltet er ændret; ingen id'er, værdier eller beregninger er rørt.
+        <br><br>
+        <strong>Fire presets fik LcaS-mærkatet FJERNET i stedet for flyttet</strong>, fordi de
+        allerede bar en LCAbyg-kildemærkat og dermed ville have påstået to kilder samtidigt
+        (<em>"… · LCAbyg · LcaS"</em>): Konstruktionsstål · ren · profil · LCAbyg Bilag 2 ·
+        Teglsten · ren · mur/facade · LCAbyg · Aluminium · ren · facadebeklædning · LCAbyg ·
+        Fibercement · ren · facadeplade · LCAbyg. Disse fire har reelt LCAbyg som kilde (teglens
+        0,294 og aluminiums 10,6 kom fra genbyg-eksporten i en tidligere version), så
+        LcaS-mærkatet var en efterladenskab fra dengang, de var Ökobaudat-baserede. De er stadig
+        mærkede — bare med den rigtige kilde. Bemærk at projektpræfikser (<code>Ripple:</code>,
+        <code>Lisbjerg:</code>, <code>Markhaven:</code> …) og kategori-præfikser
+        (<code>fund:</code>, <code>tag:</code>, <code>gulv:</code> …) er BEVARET som præfikser —
+        de er ikke kildemærkater men grupperingsnøgler, og de sorterer listerne meningsfuldt.
+        <br><br>
+        <strong>v0.21.3 — Altanmodellen dekomponeret mod Ripple: én ting var perfekt, to var forkerte.</strong>
+        Ripples altaner blev målt præcist fra den rå eksport: "Stålaltan (3,9 m² ref)", 151,8 stk
+        × 3,9 m² = <strong>592 m²</strong> altanbund, 72.620 kg, A1-3 98.391 kg CO₂e. Sammenlignet
+        med værktøjets tre parametre:
+        <br>• <strong>Densitet: 123 kg/m² mod presettets 123 — præcist match.</strong> Bibliotekets
+        <code>altan-bund-staal-trae</code> beskriver altså nøjagtig samme fysiske altantype.
+        <br>• <strong>GWP: reelt 1,355/kg mod presettets 0,965 — 29% for lavt.</strong> Ripples
+        produktmiks (ThermoWood + galvaniseret stålplade + valsede profiler + varmvalset stålbånd)
+        er tungere end bibliotekets generiske antagelse.
+        <br>• <strong>Arealratio: reelt 0,0422 mod værktøjets 0,070 — 1,66x for højt.</strong>
+        <br><br>
+        De to sidste trak hver sin vej og <em>udlignede delvist hinanden</em>: samlet gav værktøjet
+        1,66x for meget masse men kun 1,19x for meget CO₂e. Endnu et tilfælde af et resultat, der
+        så nogenlunde rigtigt ud af de forkerte grunde.
+        <br><br>
+        <strong>Rettelser.</strong> (1) Nyt preset <em>"LcaS: Altanbund stål m. trægulv · fuld
+        opbygning · galv. stålplade + valsede profiler + ThermoWood · 123 kg/m² · 167 kg CO₂e/m²
+        (Ripple)"</em> med den målte gwp 1,355. Biblioteksværdien er BEVARET og uændret — brug den
+        ved ukendt produktvalg, den nye når altanen er en projekteret stålaltan. (2) Lette
+        etageboliger får deres egen arealratio: <code>ALTAN_AREA_RATIO_BY_TYPE_LIGHT.etage =
+        0,031</code>, midtpunktet mellem Lisbjerg (≈0,020) og Ripple (0,0422), mod de tunge
+        referencers 0,070 (Kongebro 0,077 · Nordland 0,065).
+        <br><br>
+        <strong>Vigtigt forbehold, som står i koden:</strong> altanareal er en ARKITEKTONISK
+        beslutning, ikke en konsekvens af bæresystemet. De to lette datapunkter afviger indbyrdes
+        med en faktor 2, så 0,031 er et midtpunkt med betydelig usikkerhed, og sammenhængen mellem
+        konstruktionsvægt og altanareal er rent observeret på n=2 uden fysisk årsagsforklaring.
+        For et konkret projekt bør altanrækken sættes i Manuel-tilstand med det projekterede
+        altanareal — langt mere præcist end nogen typologisk sats.
+        <br><br>
+        <strong>Effekt mod Ripple:</strong> altankategorien går fra 138.595 kg / 136.575 kg CO₂e
+        (1,9x / 1,39x for højt) til 61.378 kg / <strong>81.364 kg CO₂e</strong> mod reelle
+        72.620 / 98.391 — nu 17% <em>under</em>, hvilket er den forventede konsekvens af at bruge
+        midtpunktet 0,031 frem for Ripples egne 0,0422. Standardværdier (tung) er uændrede.
+        <br><br>
+        <strong>v0.21.2 — Fundament splittet i to lag + kældervæg-densitet genkalibreret.</strong>
+        Fundament rummede hidtil BÅDE selve funderingen og kældervæggene under ét preset. Det er
+        byggeteknisk to forskellige ting: en P-bundplade er en <em>fuld opbygning</em> (plade +
+        kapillarbrydende lag + isolering, 1.839 kg/m²) og skal have et opbygnings-preset, mens en
+        kældervæg er ren armeret konstruktionsbeton. Med ét fælles preset kunne kun den ene blive
+        rigtig — og da pladen typisk er ~90% af massen, trak den altid væggene med sig. Fundament
+        er nu <code>alwaysLayered</code> med to lag: <strong>Fundering</strong> (plade/stribe/
+        punkt/pæl — al eksisterende funderingslogik uændret) og <strong>Kældervægge</strong>.
+        Kældervæg-laget giver 0 kg for bygninger uden kælder/P-kælder og er da uden effekt.
+        <br><br>
+        <strong>BASEMENT_WALL_DENSITY 300 → 765 kg/m².</strong> 300 var et udokumenteret skøn uden
+        proveniensnote og svarer til blot <strong>125 mm beton</strong> — urealistisk tyndt for en
+        jordtrykspåvirket kældervæg, hvor 250-300 mm er normalen. Ripple PF giver et måletal:
+        "Kælderydervægge" vejer 444.016 kg (405.562 beton M30 FutureCEM + 30.282 armering + 4.711
+        XPS + 3.461 bentonit-vandtætning). Mod værktøjets egen vægarealmodel (perimeter 194 m ×
+        3 m × 1 kælderetage = 581 m²) giver det <strong>765 kg/m²</strong> ≈ 319 mm — hvilket
+        passer med en vandtrykssikret P-kældervæg. Ét datapunkt, men mod en værdi der slet ikke
+        havde et.
+        <br><br>
+        <strong>Effekt (1.500 m², 6 etager, P-kælder):</strong> Fundering 551.700 kg + Kældervægge
+        159.002 kg = 710.702 kg, ingen dobbelttælling. Vælges det korrekte
+        <code>fund: Bundplade · fuld opbygning · vandtrykssikret</code> til funderingslaget og
+        armeret konstruktionsbeton til væggene, falder kategorien fra 108.027 til
+        <strong>87.890 kg CO₂e</strong> — nu med begge dele rigtigt sat i stedet for ét kompromis.
+        Verificeret: bygninger uden kælder er upåvirkede (parcelhus 110.000 kg, kældervægge 0),
+        standardværdier uændrede for alle fem typer, og LCAx-eksport skriver korrekt
+        <code>layered:fundament</code>-posten.
+        <br><br>
+        <strong>v0.21.1 — Altaner manglede i den lette variant (fejl i v0.21.0).</strong>
+        Altan-grenen i <code>defaultLayerMaterials()</code> returnerede FØR vægt-håndteringen, så
+        en "let" etagebolig fik en armeret <em>betonaltan</em>: 372 kg/m² × 1,30 = 484 kg CO₂e/m².
+        Stål med trægulv er 123 kg/m² × 0,965 = 119 — altså <strong>~4x lettere</strong>, og det
+        er netop den type, Ripple PF bruger (stålprofiler + ThermoWood). Rettet, så let vælger
+        <code>altan-bund-staal-trae</code>. Fastgørelse (konsoller, 18,1 kg/m²) og rækværk (stål,
+        1,125) er allerede de letteste i deres lag og er uændrede.
+        <br><br>
+        <strong>Målt effekt mod Ripples reelle altaner (72.620 kg / 98.391 kg CO₂e):</strong>
+        før ~413.000 kg → ~537.000 kg CO₂e, altså <strong>5,5x for højt</strong>; efter 138.595 kg
+        → 136.575 kg CO₂e, ca. 1,4x. Stadig noget over — værktøjets altanareal-ratio ligger
+        højere end Ripples faktiske — men en helt anden størrelsesorden.
+        <br><br>
+        <strong>Konsekvens for v0.21.0-valideringen, som skal korrigeres:</strong> etage/let mod
+        Ripples geometri gav 5,8 mod officielle 5,77. Det tal var delvis held. Den for tunge
+        betonaltan kompenserede for undervurderinger andre steder; med korrekt altan lander
+        værktøjet nu på <strong>5,0 mod 5,77</strong>. Det er et ærligere tal: modellen
+        undervurderer Ripple med ca. 13%, i stedet for at ramme plet ved at to fejl udlignede
+        hinanden. Standardværdier (tung) er uændrede; let-kolonnen bliver 5,3 · 6,2 · 7,7 · 7,6.
+        <br><br>
+        <strong>v0.21.0 — Ny akse: Konstruktionsvægt (Tung/standard vs. Let træ).</strong>
+        Værktøjets bygningstyper har hidtil beskrevet TUNGT byggeri (beton, stål, tegl), fordi
+        det er dét, kalibreringsreferencerne er. Skiftede man bærende materiale til træ, justerede
+        <code>getBaerendeIntensity()</code> ganske vist massen — men <em>kun</em> for den ene
+        kategori; etagedæk, indervægge og facade blev stående på de tunge værdier. Man kunne
+        altså ikke beskrive et sammenhængende træbyggeri. Ny vælger "Konstruktionsvægt" ved siden
+        af "Bærende system" sætter nu et konsistent sæt: bærende, dæk (inkl. lag), facadens
+        midterdel og beklædning, indervæggenes bærende og ikke-bærende midterdel, tag — plus
+        intensiteterne. Geometri (windowRatio) ændres IKKE; den er uafhængig af materialevalg.
+        <br><br>
+        <strong>Datagrundlaget er meget forskelligt pr. type, og det vises i UI'et.</strong> Et
+        badge ved vælgeren siger "Kalibreret" eller "Afledt", og hjælpeteksten nævner kilden:
+        <em>etage</em> = målt på Ripple PF (rå LCAbyg-eksport, 14.042 m², 6 etager, vægbårent
+        CLT); <em>kontor</em> = svagt målt på Innovation Campus (kun masse, 43 kg/m² — kilden er
+        en PDF med summerede moduler); <em>parcelhus og institution</em> = afledt, der findes
+        ingen lette referencer for dem. Deres værdier er de tunge tal skaleret med de forhold,
+        der ER målt (bærende ×0,43, vægbærende rest ×0,36, indervægge ×1,57), og de er mærket
+        "Afledt", så ingen forveksler dem med kalibrerede tal. <em>Sommerhus</em> har ingen let
+        variant — den er allerede den letteste type — og vælgeren siger det direkte.
+        <br><br>
+        <strong>Nyt preset (lukker et dokumenteret hul):</strong> <em>"LcaS: Etagedæk CLT m.
+        betonoverbeton · fuld opbygning · 84 kg/m² CLT + 44 kg/m² beton + armering · 136 kg/m²
+        · lyd-/brandkorrekt (Ripple)"</em> — alle tre tal MÅLT fra Ripple: 136 kg/m² densitet,
+        gwp −0,758/kg, biogenicKg 0,986. Den manglende "CLT-dæk med betonoverbeton" var netop
+        det hul, restafvigelsen i v0.20.3-analysen pegede på. Placerer sig som forventet mellem
+        <code>etagedaek-hybrid-trae-beton</code> (221 kg/m²) og <code>clt-daek-etage</code> (62).
+        <br><br>
+        <strong>Validering:</strong> etage/let med Ripples egen geometri (14.042 m², 6 etager)
+        giver <strong>5,8 mod projektets officielle 5,77</strong>. Tallet er delvis cirkulært —
+        etage-overlayet er kalibreret på netop Ripple — men det bekræfter, at hele kæden fra
+        vælger til lag til beregning hænger sammen. Standardværdier (tung) er uændrede for alle
+        fem typer: 6,8 · 9,9 · 13,6 · 12,1 · 4,4. Let giver 5,3 · 7,0 · 7,7 · 7,6 · (ikke
+        tilgængelig). Vægten gemmes i session og i LCAx (<code>construction_weight</code>);
+        gamle filer uden feltet indlæses som tung, præcis som før.
+        <br><br>
+        <strong>v0.20.5 — Alle seks LCAbyg-vinduespresets rettet (lukker Å2). Faktisk fejl, ikke konservativt skøn.</strong>
+        Å2 blev efterprøvet mod kildefilen <code>vinduer_døre_glasfacade.json</code> og bekræftet
+        — men årsagen viste sig at være en anden end først antaget. Det er IKKE en fejl i LCAbygs
+        bibliotek, og ikke en aflæsning af den summerede modulkolonne: det er en <strong>hierarkisk
+        dobbelttælling</strong> i vores egen udtræksrutine. LCAbygs resultater er indlejrede — en
+        ConstructionInstance indeholder allerede summen af sine ProductInstance-børn. Bevis for
+        "vindue, træ-/aluminium med 3-lags rude": konstruktionen har A1-3 = 80,31 kg CO₂e/m², og
+        summen af dens syv byggevarer (rude 46,22 + karm alu 13,06 + ramme alu 14,68 + beslag 4,48
+        + EPDM 3,34 + karm træ −1,06 + ramme træ −0,41) er <em>præcis</em> 80,31. Lægges begge
+        niveauer sammen fås 160,62, og 160,62 / 39,92 kg = <strong>4,0234</strong> — værktøjets
+        preset stod på 4,023. Fire af de seks presets rammer nøjagtigt 2,00x kildens A1-3 pr. kg;
+        de to sammensatte (plast, alu) 1,89x og 2,14x, da de er komponeret af karm + rude hver
+        for sig.
+        <br><br>
+        <strong>Rettede værdier (kg CO₂e pr. kg):</strong> træ/alu 4,023→2,012 · træ 2,808→1,404 ·
+        plast 4,50→2,384 · alu 8,50→3,965 · fladtagsvindue 6,269→3,135 · glastag 7,508→3,754.
+        To massetætheder er samtidig sat til kildens egne værdier: plast 45→48 kg/m² og alu
+        42→40 kg/m². Omregnet betyder det fx, at et træ/alu-vindue går fra 161 til <strong>80,3
+        kg CO₂e/m²</strong> — hvilket nu ligger korrekt over Ripples produkt-EPD-vindue på 48,2
+        (v0.20.4-presettet), som det skal for et generisk bibliotekstal.
+        <br><br>
+        <strong>Konsekvens:</strong> vinduer var værktøjets største enkeltfejl. Fejlen ramte alle
+        fem bygningstyper, og fordi værktøjet selv lægger B4 og C3-C4 oveni A1-3, blev
+        overvurderingen forstærket i slutresultatet. <code>vinduer-fuld</code> (1,625) stammer fra
+        en anden kilde (institutionsprojekt) og er ikke berørt; dens 50 kg/m² × 1,625 = 81 kg
+        CO₂e/m² falder nu naturligt sammen med det rettede træ/alu-tal, hvilket er en uafhængig
+        bekræftelse af rettelsen.
+        <br><br>
+        <strong>v0.20.4 — Nyt produkt-EPD-vinduespreset (Ripple) + vigtigt fund om det generiske.</strong>
+        Nyt preset <em>"LcaS: Vindue træ/alu m. udv. alubeklædning · fuld opbygning · 3-lags rude ·
+        produkt-EPD lavCO₂ · 39,5 kg/m² · 48 kg CO₂e/m²"</em>, kalibreret fra Ripple PF's rå
+        LCAbyg-eksport: konstruktionen "Vinduer og øvrige døre", 3.078 m², A1-3 = 148.360 kg CO₂e,
+        produkt Velfac 200 Energy (top-guided, 3-lags rude, trækerne m. udvendig alubeklædning).
+        Massetætheden 39,5 kg/m² falder sammen med LCAbyg-bibliotekets generiske træ/alu-vindue
+        (39,9 kg/m²) inden for 1% — samme fysiske vinduestype, forskellen ligger udelukkende i
+        produktets miljødata. Presettet er et ALTERNATIV til, ikke en erstatning for, det
+        generiske: brug LCAbyg-værdien når produktvalget er ukendt, og denne når der reelt
+        stilles EPD-krav i udbuddet.
+        <br><br>
+        <strong>LUKKET i v0.20.5 (var ÅBENT Å2) — fejl i de seks LCAbyg-vinduespresets.</strong> Ved
+        kalibreringen af det nye preset blev kildefilen <code>vinduer_døre_glasfacade.json</code>
+        genlæst modulopdelt. For "vindue, træ-/aluminium med 3-lags rude" (1,0 m², 39,92 kg) er:
+        A1-3 = 80,31 · B4 = 49,00 · C3+C4 = 33,19 · <strong>SUM = 162,50 kg CO₂e/m²</strong>.
+        Pr. kg giver det A1-3 = <strong>2,012</strong> og SUM = <strong>4,071</strong>.
+        Værktøjets preset står på <strong>4,023</strong> — hvilket matcher SUM/kg inden for 1,2%,
+        ikke A1-3/kg. Da presettet indgår som et A1-A3-tal, og værktøjet selv lægger B4 og C3-C4
+        oveni bagefter, ser det ud til, at v0.20.0-kalibreringen aflæste den summerede
+        modulkolonne i stedet for produktionskolonnen — i så fald er værdien ca. <strong>2x for
+        høj</strong>, og B4/C3-C4 tælles delvist to gange. Samme mønster bør efterprøves for de
+        øvrige fem <code>*-lcabyg</code>-vinduespresets. <strong>Presetterne er efter aftale IKKE
+        ændret her</strong> — fundet er noteret til separat beslutning, da en rettelse påvirker
+        alle fem bygningstypers standardtal.
+        <br><br>
+        <strong>v0.20.3 — Tre generelle rettelser fundet ved validering mod Ripple PF.</strong>
+        En LCAx-fil bygget med Ripples <em>reelle</em> mængder (rå LCAbyg-eksport, sum
+        verificeret = 9.675.676 kg) men værktøjets egne presets gav 13,1 kg CO₂e/m²/år
+        mod projektets officielle 5,77 — 127% for højt. Modulopdelt afslørede det tre
+        fejl, som alle er generelle (ikke Ripple-specifikke) og to af dem allerede
+        dokumenterede som åbne problemer i koden:
+        <br><br>
+        <strong>(1) <code>clt-daek-etage</code> biogenicKg 1,80 → 0,99.</strong> Kun TRE af
+        værktøjets 45 giveback-presets havde et gættet tal (400%); de øvrige 42 er
+        udledt af rigtige eksporter. 1,80 lå desuden over rent massivtræs egen
+        biogenicKg (1,474) — fysisk umuligt for en blandet forsamling, der pr.
+        definition rummer ikke-biogent materiale. Ripples CLT+beton-dæk måler 0,986.
+        Effekt: −1,84 kg/m²/år på et CLT-dækbyggeri. De to øvrige gættede presets er
+        efterset og beholdt: <code>traekonstruktion-letvaeg-ydervaeg</code> (0,84) rammer
+        Ripples reelle ydervæg (0,89) inden for 6%, og <code>tagkonstruktion-let</code>
+        (0,40) har intet modstridende datapunkt.
+        <br><br>
+        <strong>(2) B6-fordeling for boliger 55/45 el/varme → 100/0.</strong> v0.20.1's
+        split blev indført for at rette kontorer (som reelt har tung fjernvarme) men
+        var en utilsigtet REGRESSION for boliger: den hævede bolig-tallet fra 1,50 til
+        1,91, og 1,50 var netop den værdi, der før v0.20.1 var valideret til ±3% mod
+        etage-referencerne. Alle tre tilgængelige etage-referencer har fjernvarme-bidrag
+        på præcis 0 (Sophushaven 1,27 · Tankefuld 1,85 · Ripple 0,53; gennemsnit 1,22).
+        Erhverv uændret 35/65. Effekt: −0,41 kg/m²/år for alle boligtyper.
+        <br><br>
+        <strong>(3) b4pct 45 → 29 (lukker den dokumenterede åbne fejl Å1).</strong> 45%
+        var kalibreret mod en UVÆGTET Σ|A1-A3| og blev aldrig genberegnet, da den
+        kategori-vægtede base blev indført — værdien blev altså anvendt på en base, den
+        ikke passede til. Kodenoten krævede eksplicit et projekts rå B4 frem for et gæt;
+        Ripple leverer det: reel B4 439.327 kg mod vægtet base 1.528.479 kg = 28,7%.
+        Med 45% ramte værktøjet 57% for højt. Effekt: −0,57 kg/m²/år.
+        <br><br>
+        <strong>Samlet:</strong> Ripple går fra 13,1 til 7,0 mod officielle 5,77. Restafvigelsen
+        (+1,2) er kortlagt og skyldes manglende presets, ikke forkerte antagelser:
+        vinduespresetterne er ~3× for høje mod et moderne produkt-EPD-vindue (Velfac 200
+        Energy: 48 kg CO₂e/m² mod værktøjets 161), ingen af de 13 gulv-presets har
+        biogenicKg selv om moderne gulvopbygninger ofte er træbaserede, og der findes
+        intet preset for CLT-dæk med betonoverbeton. Disse er noteret som huller, IKKE
+        lukket med gæt.
+        <br><br>
+        <strong>v0.20.2 — Trækontor-kalibrering (analysefund C3, delvist adresseret).</strong>
+        Første reelle datapunkt for en trædomineret kontorbygning: Innovation Campus
+        (KIRKBI A/S, arkitekt/rådgiver NIRAS, BR18 kontor-klassificeret — bygningens
+        reelle funktion er sport/sundhed, men den er beregnet som kontor jf. BR18
+        §297). 49.444 m² opvarmet areal. Bærende system er limtræ/CLT-domineret:
+        Søjler+bjælker vejer 2.137.541 kg i alt, heraf 85% limtræ (2.273 m³
+        limtræsbjælker + 1.337 m³ limtræssøjler/diagonaler), 15% stål (diverse
+        HE/RHS/SHS-profiler), &lt;0,2% beton (én enkelt Ø500-søjle). Total realmasse:
+        43,2 kg/m² opvarmet areal — næsten identisk med Pakhusenes rene stålmasse
+        (43,0 kg/m²), som ankrer værktøjets stål-massefaktor (0,14).
+        <br><br>
+        <strong>Ændring:</strong> <code>BAERENDE_MATERIAL_FACTOR['trae-konstr']</code>
+        0,5→<strong>0,2</strong> (og de afledte CLT/limtræ-i-bjælke-varianter
+        proportionalt ned med samme faktor 0,4×). Det gamle skøn (0,5, dvs. 3,6×
+        stålets massebehov) var ifølge værktøjets egen tidligere note "ingen
+        projekt-isoleret masse — grove skøn", altså aldrig data-forankret. Innovation
+        Campus modsiger det kraftigt: en 85%-trækonstruktion opnår her næsten samme
+        totale massetæthed som en 100%-stålkonstruktion (Pakhusene). 0,2 er valgt
+        <em>forsigtigt</em> frem for at ramme 0,14 (stål-paritet), fordi Innovation
+        Campus er en hybrid — 15% stål bærer en del af lasten, så en ren
+        100%-trækonstruktion formodes at kræve noget mere masse end den blandede,
+        men markant mindre end det gamle 3,6×-skøn.
+        <br><br>
+        <strong>Vigtig usikkerhed — læs før videre brug:</strong> Kilden er PDF-rapportens
+        Bilag 2 "Mængdeskema", IKKE en rå LCAbyg <code>model</code>/<code>results</code>-
+        JSON-eksport som ved JYSK/DTU/EC Hansens. Bilag 2's tal er allerede summeret
+        over A1-3+B4+C3-4 (og for enkelte materialer D), IKKE isoleret A1-3 som de
+        øvrige tre kontorreferencer (140/45/120 kg CO₂e/m²) er kalibreret til. Da
+        både limtræ og stål her har levetid ≥ betragtningsperioden (100-120 år ift.
+        50 år), er B4 = 0 for næsten al bærende masse, så forskellen fra ren A1-3
+        stammer primært fra C3-4 (bortskaffelse/forbrænding) — for limtræ typisk en
+        mindre, delvist opvejende post pga. biogen kulstof-bogføring, men ikke
+        kvantificeret separat her. Denne kalibrering er derfor en <strong>estimeret
+        korrektion, ikke en præcis A1-3-kalibrering</strong> — behandl 0,2 som et
+        bedre, data-informeret skøn frem for det tidligere ugrundede 0,5, men ikke
+        som lige så robust som JYSK/DTU/EC-tallene. Erstat gerne med en rå
+        model/results-eksport, hvis en sådan bliver tilgængelig for Innovation
+        Campus eller et andet trækontor-projekt.
+        <br><br>
         <strong>v0.20.1 — B6 (drift) opdelt i el + varme.</strong> Driftsforbruget beregnes nu som <em>el × el-faktor + varme × varme-faktor</em> i stedet for én samlet faktor. Baggrund: en gennemgang af referenceprojekternes reelle B6 viste, at værktøjet ramte etageboliger godt (±3%) men undervurderede kontorer med ~57% (2,06 mod reelt 4,77) — fordi kontorer har tung fjernvarme (≈75% af drifts-CO₂) som en el-faktor ikke fanger. Energirammen (BR18 §§259-260) fordeles nu på el/varme efter type (bolig 55/45, erhverv 35/65) med separate faktorer (el 0,05, fjernvarme 0,08). Man kan indtaste egne el- og varmebehov fra sin Be18/Be23-beregning for et projektspecifikt estimat. Gamle gemte sessioner og LCAx-filer med det gamle enkelt-felt konverteres automatisk (lægges på el).
         <br><br>
         <strong>v0.20.0 — Optimeringsrunde: vinduer kalibreret + bugfixes.</strong>
@@ -1182,7 +1461,7 @@
 <script>
 (function(){
 
-  const APP_VERSION = '0.20.1';
+  const APP_VERSION = '0.21.4';
 
   // ================= CONSTANTS & PLACEHOLDER DATA =================
   // All numeric coefficients below are illustrative order-of-magnitude
@@ -1203,9 +1482,9 @@
     // danske EPD'er, men markant bedre funderet end før.
     // Navnekonvention (alle presets):
     // [kilde]: [hvad] · [omfang: ren|inkl. …|fuld opbygning|struktur+isolering|finish|intet] · [spec] · [valgfri note]
-    { id:'beton-insitu',   name:'LcaS: Beton in-situ · ren · C30/37',        unit:'kg', gwp:0.065 },  // n=210 (ready-mix/ortbeton)
-    { id:'beton-elem',     name:'LcaS: Betonelementer · ren · præfab',        unit:'kg', gwp:0.087 },  // n=84 (precast concrete)
-    { id:'stal-arm',       name:'LcaS: Armeringsstål · ren',                  unit:'kg', gwp:0.56 },   // n=5 (reinforcing steel) — lille datamængde, mindre sikker
+    { id:'beton-insitu',   name:'Beton in-situ · ren · C30/37 · LcaS',        unit:'kg', gwp:0.065 },  // n=210 (ready-mix/ortbeton)
+    { id:'beton-elem',     name:'Betonelementer · ren · præfab · LcaS',        unit:'kg', gwp:0.087 },  // n=84 (precast concrete)
+    { id:'stal-arm',       name:'Armeringsstål · ren · LcaS',                  unit:'kg', gwp:0.56 },   // n=5 (reinforcing steel) — lille datamængde, mindre sikker
     // Fundament/terrændæk-kategorierne repræsenterer i praksis en støbt
     // konstruktion inkl. sædvanlig armering, ikke ren beton — derfor et
     // separat, blandet preset i stedet for at forvanske beton-insitus egen,
@@ -1227,7 +1506,7 @@
     // = 0,6834 kg/kg, i et typisk fundamentblandingsforhold på ~3,4%
     // armering af massen (fx punktfundament 400/1000/1000mm: 32 kg
     // armering / 933,6 kg total) → blandet 0,152. Afrundet til 0,152.
-    { id:'beton-insitu-armeret', name:'LcaS: Beton in-situ · inkl. armering · C35/45 · fundament', unit:'kg', gwp:0.152 },
+    { id:'beton-insitu-armeret', name:'Beton in-situ · inkl. armering · C35/45 · fundament · LcaS', unit:'kg', gwp:0.152 },
     // ---- "fund-"-præfiks: fundament-specifikke presets fra en rå LCAbyg-
     // eksport af Eksempelbibliotekets Fundament-kategori (47 konstruktioner,
     // native model+results-format). Præfikset holder dem adskilt fra de
@@ -1266,7 +1545,7 @@
     // Terrændæk bruger typisk en lavere styrkeklasse (C25/30) end fundamentet
     // — kalibreret fra samme reelle projekts terrændæksplade (inkl. minimal
     // armeringsnet), gwp/kg ≈0,115.
-    { id:'beton-insitu-terraendaek', name:'LcaS: Beton in-situ · inkl. armeringsnet · C25/30 · terrændæk', unit:'kg', gwp:0.115 },
+    { id:'beton-insitu-terraendaek', name:'Beton in-situ · inkl. armeringsnet · C25/30 · terrændæk · LcaS', unit:'kg', gwp:0.115 },
     // ---- "terraendaek-"-præfiks: tykkelses-specifikke terrændæk-presets fra
     // samme rå LCAbyg-eksport som Etagedæk/Ydervægge ovenfor. Kræver egen
     // massetæthed pr. preset (se TERRAINDAEK_MATERIAL_DENSITY) — de kan IKKE
@@ -1295,14 +1574,14 @@
     // hed "Konstruktionstræ (KL/limtræ)", hvilket ikke er oplagt at finde
     // ved facadebeklædning. Samme GWP/kg (Ökobaudat, massivt træ), egen
     // tæthed svarende til en tynd beklædning+lægter, ikke en bærende væg.
-    { id:'traebeklaedning-facade', name:'LcaS: Træbeklædning · ren · facade · fyr/gran', unit:'kg', gwp:-1.42, giveback:110, biogenicKg:1.562 },  // ren biogen
+    { id:'traebeklaedning-facade', name:'Træbeklædning · ren · facade · fyr/gran · LcaS', unit:'kg', gwp:-1.42, giveback:110, biogenicKg:1.562 },  // ren biogen
     // Indervægge er i praksis ofte en let stål-/trælægte-konstruktion med
     // gips på begge sider, ikke bare en gipsplade — men Indvendigt-kategoriens
     // mængde er allerede kalibreret til at matche den fulde reelle
     // Indervægge-masse (se note ved TYPE_DEFAULTS.interiorIntensity). Dette
     // preset er derfor primært til gennemsigtighed/valg af GWP-profil, ikke
     // en mængdeændring.
-    { id:'letvaegs-indervaeg', name:'LcaS: Letvægs indervæg · fuld opbygning · lægter+gips+isolering', unit:'kg', gwp:0.20 },
+    { id:'letvaegs-indervaeg', name:'Letvægs indervæg · fuld opbygning · lægter+gips+isolering · LcaS', unit:'kg', gwp:0.20 },
     { id:'clt-indervaeg', name:'Ripple: CLT-indervæg · fuld opbygning · 200mm sandwich', unit:'kg', gwp:-0.52, giveback:162, biogenicKg:0.8424 },  // kalibreret fra Ripple "GV02 — Bærende væg, 200 mm": ét navngivet, symmetrisk 4-lags opbygning (45,7% CLT, 49,1% Fermacell fibergips, 5,2% stålplade), produkt-niveau GWP — se note
     // Fundet i Lisbjerg Bakke (etageboliger, beton+træ-hybrid): "Beton
     // vægelementer" — præfabrikerede bærende indervægselementer, 180-250mm,
@@ -1348,6 +1627,7 @@
     // GWP kalibreret mod Kongebrohuset «Altan» (A1–A3/masse ≈ 1,31) — bibliotekets
     // rene betonbund (0,22) undervurderede tung etage-altan markant.
     { id:'altan-bund-betonbund-armeret', name:'altan: Bund · inkl. armering · beton · LCAbyg', unit:'kg', gwp:1.30 },
+    { id:'altan-bund-staal-trae-ripple', name:'Altanbund stål m. trægulv · fuld opbygning · galv. stålplade + valsede profiler + ThermoWood · 123 kg/m² · 167 kg CO₂e/m² (Ripple) · LcaS', unit:'kg', gwp:1.355 },
     { id:'altan-bund-staal-trae', name:'altan: Bund · fuld opbygning · stål+trægulv · LCAbyg', unit:'kg', gwp:0.965 },
     { id:'altan-bund-staal-fiberbeton', name:'altan: Bund · fuld opbygning · stål+fiberbeton · LCAbyg', unit:'kg', gwp:0.680 },
     { id:'altan-bund-staal-alu', name:'altan: Bund · fuld opbygning · stål+alu-plade · LCAbyg', unit:'kg', gwp:2.139 },
@@ -1376,7 +1656,7 @@
     // påvirker kontor-typens standard bærende konstruktion (som bruger ren
     // stål som default) markant — se footer-note for konsekvens og fortsat
     // åben usikkerhed om det reelle stål/beton-blandingsforhold (Pakhusene).
-    { id:'stal-konstr',    name:'LcaS: Konstruktionsstål · ren · profil · LCAbyg Bilag 2',               unit:'kg', gwp:0.99 },  // n=26 (structural steel profile)
+    { id:'stal-konstr',    name:'Konstruktionsstål · ren · profil · LCAbyg Bilag 2',               unit:'kg', gwp:0.99 },  // n=26 (structural steel profile)
     // OPDATERET (genbyg-biblioteket prioriteres, jf. kalibreringsprincip 8):
     // var 0,24 (Ökobaudat-median, n=11). Vi rettede allerede tidligere
     // CLADDING_AREA_DENSITY.tegl (140→214 kg/m²) ud fra den eksakte
@@ -1385,11 +1665,11 @@
     // materialefaktoren tilsvarende. Isoleret fra mørtelen giver samme
     // konstruktion en ren teglsten-faktor på 0,2936 kg/kg (mørtelens egen
     // faktor er 0,1726 — de to blandet giver konstruktionens fulde 0,258).
-    { id:'tegl',           name:'LcaS: Teglsten · ren · mur/facade · LCAbyg',         unit:'kg', gwp:0.294 },   // n=11 (fired brick) — RETTET til eksakt LCAbyg-værdi
+    { id:'tegl',           name:'Teglsten · ren · mur/facade · LCAbyg',         unit:'kg', gwp:0.294 },   // n=11 (fired brick) — RETTET til eksakt LCAbyg-værdi
     // trae-konstr var oprindeligt +0.05 — Ökobaudat viser markant negativt
     // (biogent lager dominerer for ren konstruktionstræ/KVH), ikke en lille
     // positiv værdi. Én af de største rettelser i denne kalibreringsrunde.
-    { id:'trae-konstr',    name:'LcaS: Konstruktionstræ · ren · KL/limtræ',   unit:'kg', gwp:-1.42, giveback:110, biogenicKg:1.562 },  // n=21 (structural timber/KVH) — ren biogen, ~1:1 tilbagebetaling. Krydsvalideret: genbyg-eksport af Søjler & Bjælker giver -1,4912 for alt savet konstruktionstræ (bjælker OG søjler, alle dimensioner) — tæt på (5%), ikke ændret.
+    { id:'trae-konstr',    name:'Konstruktionstræ · ren · KL/limtræ · LcaS',   unit:'kg', gwp:-1.42, giveback:110, biogenicKg:1.562 },  // n=21 (structural timber/KVH) — ren biogen, ~1:1 tilbagebetaling. Krydsvalideret: genbyg-eksport af Søjler & Bjælker giver -1,4912 for alt savet konstruktionstræ (bjælker OG søjler, alle dimensioner) — tæt på (5%), ikke ændret.
     // ---- Nye presets fra rå LCAbyg-eksport af Søjler & Bjælker-kategorien
     // (180 konstruktioner: betonbjælker/-søjler, stål- og trækonstruktioner,
     // samt komposit-/hybridbjælker). Beton her er MERE armeringstung end det
@@ -1415,17 +1695,17 @@
     { id:'baerende-trae-i-bjaelke', name:'baerende: Træ I-bjælke · ren · finerspændt · LCAbyg', unit:'kg', gwp:-1.29, giveback:110, biogenicKg:1.419 },
     { id:'baerende-brandbeklaedning', name:'baerende: Brandbeklædning · ren · brandgips · LCAbyg', unit:'kg', gwp:0.1541 },
     { id:'baerende-ingen-brand',      name:'baerende: Ingen brandbeklædning · intet', unit:'kg', gwp:0 },
-    { id:'krydsfiner',     name:'LcaS: Krydsfiner/spånplade · ren',           unit:'kg', gwp:0.35 },
-    { id:'mineraluld',     name:'LcaS: Mineraluld · ren · isolering',         unit:'kg', gwp:1.36 },   // n=28 (mineral wool)
-    { id:'eps',            name:'LcaS: EPS · ren · isolering',                  unit:'kg', gwp:3.12 },   // n=26 (polystyrene)
-    { id:'gips',           name:'LcaS: Gipsplade · ren',                      unit:'kg', gwp:0.17 },   // n=20 (gypsum plasterboard, via m²→kg)
-    { id:'glas',           name:'LcaS: Glas · ren · facade/vinduer',          unit:'kg', gwp:2.333 },  // var 35/m² ÷ 15 kg/m²
-    { id:'tagpap',         name:'LcaS: Tagpap · ren · bitumen membran',  unit:'kg', gwp:0.558 },  // LCAbyg tag.json: 2 lag (under+top), vægtet gwp/kg
+    { id:'krydsfiner',     name:'Krydsfiner/spånplade · ren · LcaS',           unit:'kg', gwp:0.35 },
+    { id:'mineraluld',     name:'Mineraluld · ren · isolering · LcaS',         unit:'kg', gwp:1.36 },   // n=28 (mineral wool)
+    { id:'eps',            name:'EPS · ren · isolering · LcaS',                  unit:'kg', gwp:3.12 },   // n=26 (polystyrene)
+    { id:'gips',           name:'Gipsplade · ren · LcaS',                      unit:'kg', gwp:0.17 },   // n=20 (gypsum plasterboard, via m²→kg)
+    { id:'glas',           name:'Glas · ren · facade/vinduer · LcaS',          unit:'kg', gwp:2.333 },  // var 35/m² ÷ 15 kg/m²
+    { id:'tagpap',         name:'Tagpap · ren · bitumen membran · LcaS',  unit:'kg', gwp:0.558 },  // LCAbyg tag.json: 2 lag (under+top), vægtet gwp/kg
     // Fuld tagkonstruktion (struktur+isolering+membran), ikke kun tagpappen —
     // se note ved ROOFING_AREA_DENSITY. Let/tung afspejler træ- vs.
     // beton/stål-baseret tagdæk, ligesom installationer længere nede.
-    { id:'tagkonstruktion-let',  name:'LcaS: Tagkonstruktion · fuld opbygning · let træ · struktur+isolering+membran', unit:'kg', gwp:-0.10, giveback:400, biogenicKg:0.4 },  // blandet forsamling, se note
-    { id:'tagkonstruktion-tung', name:'LcaS: Tagkonstruktion · fuld opbygning · tung beton/stål · struktur+isolering+membran', unit:'kg', gwp:0.20 },
+    { id:'tagkonstruktion-let',  name:'Tagkonstruktion · fuld opbygning · let træ · struktur+isolering+membran · LcaS', unit:'kg', gwp:-0.10, giveback:400, biogenicKg:0.4 },  // blandet forsamling, se note
+    { id:'tagkonstruktion-tung', name:'Tagkonstruktion · fuld opbygning · tung beton/stål · struktur+isolering+membran · LcaS', unit:'kg', gwp:0.20 },
     // ---- "tag-"-præfiks: rå LCAbyg-eksport af Tage-kategoriens "Midterlag"
     // (bærende tagkonstruktion + isolering). BEMÆRK: dækker IKKE selve
     // tagbeklædningen (tegl/zink/tagpap) — undervurderer derfor let det
@@ -1467,15 +1747,15 @@
     // kg/kg og Aluminiumsplade 10,462 kg/kg (to uafhængige konstruktioner,
     // "Yderside, natursten" og "Yderside, aluminiumspaneler") — gennemsnit
     // 10,57, afrundet til 10,6.
-    { id:'alu',            name:'LcaS: Aluminium · ren · facadebeklædning · LCAbyg',   unit:'kg', gwp:10.6 },
-    { id:'pvc',            name:'LcaS: PVC · ren · rammer/rør',                unit:'kg', gwp:2.52 },  // n=24 (PVC)
+    { id:'alu',            name:'Aluminium · ren · facadebeklædning · LCAbyg',   unit:'kg', gwp:10.6 },
+    { id:'pvc',            name:'PVC · ren · rammer/rør · LcaS',                unit:'kg', gwp:2.52 },  // n=24 (PVC)
     // Installationer: deklareret som kg CO₂e/m² GFA i LCAbyg — omregnet til
     // kg-masse × GWP/kg via INSTALLATION_MATERIAL_DENSITY (~7 kg/m², Lisbjerg),
     // så UI matcher øvrige kategorier (kg primært, m² som geom-hint). Impact
     // uændret: area × (gwp_m2) = (area×density) × (gwp_m2/density).
-    { id:'installation-let',    name:'LcaS: Installationer · fuld opbygning · let bolig',        unit:'kg', gwp:1.429 },  // var 10 kg/m²
-    { id:'installation-middel', name:'LcaS: Installationer · fuld opbygning · middel etage/institution',            unit:'kg', gwp:3.571 },  // var 25
-    { id:'installation-tung',   name:'LcaS: Installationer · fuld opbygning · tung kontor',       unit:'kg', gwp:4.571 },  // var 32
+    { id:'installation-let',    name:'Installationer · fuld opbygning · let bolig · LcaS',        unit:'kg', gwp:1.429 },  // var 10 kg/m²
+    { id:'installation-middel', name:'Installationer · fuld opbygning · middel etage/institution · LcaS',            unit:'kg', gwp:3.571 },  // var 25
+    { id:'installation-tung',   name:'Installationer · fuld opbygning · tung kontor · LcaS',       unit:'kg', gwp:4.571 },  // var 32
     // Kilde: LCAbyg Eksempelbibliotek 2023's egne "Standardværdier" for
     // installationer, opsummeret pr. bygningstype (Varme/Ventilation/Køl +
     // Vand + Afløb). GENERISK biblioteksdata, ikke et reelt projekts egne
@@ -1492,13 +1772,13 @@
     { id:'installation-lcabyg-etagebolig',    name:'installation: Standardværdi · fuld opbygning · etagebolig · LCAbyg',          unit:'kg', gwp:2.0 },
     // Solceller — screening tillæg for etage (Kongebro ~0,22 / Nordland ~0,61 emb).
     // Effektiv densitet×gwp kalibreret til ~0,30 kg CO₂e/m² GFA/år ved ratio 0,025.
-    { id:'solceller-etage', name:'LcaS: Solceller · fuld opbygning · tag/facade · screening', unit:'kg', gwp:8.0 },
+    { id:'solceller-etage', name:'Solceller · fuld opbygning · tag/facade · screening · LcaS', unit:'kg', gwp:8.0 },
     { id:'installation-lcabyg-kontor-skole',  name:'installation: Standardværdi · fuld opbygning · kontor/skole · LCAbyg', unit:'kg', gwp:6.714 }, // var 47
     { id:'installation-lcabyg-oevrige',       name:'installation: Standardværdi · fuld opbygning · øvrige · LCAbyg',    unit:'kg', gwp:8.714 }, // var 61
     // Ekstra presets, tilføjet så hver kategoris rulleliste kan begrænses til
     // reelt meningsfulde valg for netop den bygningsdel (se
     // CATEGORY_MATERIAL_PRESETS) i stedet for alle kg-materialer på tværs.
-    { id:'beton-lavco2',        name:'LcaS: Beton lav-CO2 · ren · skøn (flyveaske/slagge)', unit:'kg', gwp:0.07 },
+    { id:'beton-lavco2',        name:'Beton lav-CO2 · ren · skøn (flyveaske/slagge) · LcaS', unit:'kg', gwp:0.07 },
     // Unicon MD-21109-DA (EPD Danmark): Moderat 30 MPa fabriksbeton med
     // FUTURECEM CEM II/B-M. A1–A3 = 227 kg CO₂e/m³, massefylde 2.250 kg/m³
     // → 0,101 kg/kg. EPD er ren beton (armering tilføjes efterfølgende).
@@ -1506,8 +1786,8 @@
     // (LCAbyg 0,6834 kg/kg) → 0,966×0,101 + 0,034×0,683 ≈ 0,121.
     { id:'epd-unicon-futurecem-30-ren',     name:'EPD: Unicon FUTURECEM · ren · 30 MPa · MD-21109', unit:'kg', gwp:0.101 },
     { id:'epd-unicon-futurecem-30-armeret', name:'EPD: Unicon FUTURECEM · inkl. armering (~3,4%) · 30 MPa · screening', unit:'kg', gwp:0.121 },
-    { id:'clt-massivtrae',      name:'LcaS: CLT-element · ren · massivtræ',                        unit:'kg', gwp:-1.34, giveback:110, biogenicKg:1.474 },  // n=12 (glue-laminated timber), var -0,05 — ren biogen
-    { id:'traefiber-isolering', name:'LcaS: Træfiberisolering · ren',                            unit:'kg', gwp:-1.08, giveback:110, biogenicKg:1.188 },  // n=8 (wood fibre insulation), var -0,30 — ren biogen
+    { id:'clt-massivtrae',      name:'CLT-element · ren · massivtræ · LcaS',                        unit:'kg', gwp:-1.34, giveback:110, biogenicKg:1.474 },  // n=12 (glue-laminated timber), var -0,05 — ren biogen
+    { id:'traefiber-isolering', name:'Træfiberisolering · ren · LcaS',                            unit:'kg', gwp:-1.08, giveback:110, biogenicKg:1.188 },  // n=8 (wood fibre insulation), var -0,30 — ren biogen
     // fibercement kunne ikke matches direkte i Ökobaudat — "Wood cement
     // boards" (n=26, via m²→kg) gav ~ -0,05, men er ikke samme produkt som
     // typisk facade-fibercement (cement+cellulose vs. cement+træspåner) —
@@ -1517,12 +1797,12 @@
     // rene fibercementplade-komponent isoleret fra træ-underkonstruktionen
     // giver 0,538 kg CO₂e/kg (dansk Bilag 2 tabel 7-grundlag), afrundet til
     // 0,54. Fjerner den tidligere usikkerheds-markering.
-    { id:'fibercement',         name:'LcaS: Fibercement · ren · facadeplade · LCAbyg',                    unit:'kg', gwp:0.54 },
+    { id:'fibercement',         name:'Fibercement · ren · facadeplade · LCAbyg',                    unit:'kg', gwp:0.54 },
     // Grønt tag har typisk et tungere, jordbaseret opbygningslag end de øvrige
     // tagpresets — ROOFING_AREA_DENSITY antager samme kg/m² for alle
     // tagvalg som en screening-forenkling; overvej manuel mængde-overstyring
     // for grønne tage, hvor substratlaget kan veje markant mere.
-    { id:'tag-groent',          name:'LcaS: Grønt tag · fuld opbygning · ekstensivt sedum · skøn',                unit:'kg', gwp:0.10 },
+    { id:'tag-groent',          name:'Grønt tag · fuld opbygning · ekstensivt sedum · skøn · LcaS',                unit:'kg', gwp:0.10 },
     { id:'vinduer-fuld',        name:'Institution: Vindue · fuld opbygning · ramme+glas',          unit:'kg', gwp:1.625 }, // var 65/m² ÷ 40 kg/m²
     // Kilde: LCAbyg Eksempelbibliotek 2023 (BUILD/Aalborg Universitet) — en
     // GENERISK biblioteksværdi, ikke et reelt projekts egne tal (svagere
@@ -1533,13 +1813,27 @@
     // baggrund af dette ene bibliotekstal alene — men disse to er tilføjet
     // som valgbare alternativer, og afvigelsen er dokumenteret som et åbent
     // punkt i footeren. Omregnet til kg via WINDOW_MATERIAL_DENSITY.
-    { id:'vindue-trae-alu-3lag-lcabyg', name:'vindue: Træ/alu · fuld opbygning · 3-lags · LCAbyg', unit:'kg', gwp:4.023 }, // LCAbyg vindues-eksport: 39,9 kg/m² × 4,023 = 161 kg CO₂e/m²
-    { id:'vindue-trae-3lag-lcabyg',     name:'vindue: Træ · fuld opbygning · 3-lags · LCAbyg',            unit:'kg', gwp:2.808 }, // LCAbyg vindues-eksport: 37,4 kg/m² × 2,808 = 105 kg CO₂e/m² (letteste komplette vindue)
-    { id:'vindue-plast-3lag-lcabyg',    name:'vindue: Plast/PVC · fuld opbygning · 3-lags · LCAbyg',      unit:'kg', gwp:4.5 },   // afledt: plastkarm 6,281/kg + 3-lags rude; ~komplet plastvindue
-    { id:'vindue-alu-3lag-lcabyg',      name:'vindue: Aluminium · fuld opbygning · 3-lags · LCAbyg',      unit:'kg', gwp:8.5 },   // alu-karm 20,4/kg (tungt aftryk) + rude; komplet alu-vindue
-    { id:'vindue-fladtag-plast-lcabyg', name:'vindue: Fladtagsvindue · fuld opbygning · plast · LCAbyg',   unit:'kg', gwp:6.269 }, // LCAbyg: 72,1 kg/m² × 6,269 = 452 kg CO₂e/m²
-    { id:'vindue-glastag-alu-lcabyg',   name:'vindue: Glastag/ovenlys · fuld opbygning · alu · LCAbyg',    unit:'kg', gwp:7.508 }, // LCAbyg: 61,8 kg/m² × 7,508 = 464 kg CO₂e/m²
-    { id:'traeplade-finish',    name:'LcaS: Træplade · finish · indvendig',                  unit:'kg', gwp:0.15 },
+    { id:'vindue-trae-alu-3lag-lcabyg', name:'vindue: Træ/alu · fuld opbygning · 3-lags · LCAbyg', unit:'kg', gwp:2.012 }, // RETTET v0.20.5 (var 4,023, hierarkisk dobbelttælling): LCAbyg-eksport A1-3 = 39,9 kg/m² × 2,012 = 80,3 kg CO₂e/m²
+    // NYT v0.20.4 — produkt-EPD-vindue kalibreret fra Ripple PF (rå LCAbyg-eksport).
+    // Konstruktionen "Vinduer og øvrige døre": 3.078 m², A1-3 = 148.360 kg CO₂e
+    // = 48,2 kg CO₂e/m². Produktet er Velfac 200 Energy, top-guided, 3-lags rude,
+    // træ-kerne m. udvendig alu-beklædning, 121.612 kg / 3.078 m² = 39,5 kg/m² —
+    // massetætheden falder sammen med LCAbyg-bibliotekets generiske træ/alu-vindue
+    // (39,9 kg/m²) inden for 1%, hvilket bekræfter, at det er samme fysiske
+    // vinduestype; forskellen ligger UDELUKKENDE i produktets miljødata.
+    // Levetid 50 år på selve vinduet (rammen), 25 år på ruden — LCAbyg bogfører
+    // rudeudskiftningen på en separat linje med A1-3 = 0, som derfor IKKE er
+    // medregnet i massetætheden her (den ville dobbelttælle glasset fysisk).
+    // Dette preset er et ALTERNATIV til, ikke en erstatning for, det generiske
+    // LCAbyg-preset ovenfor: brug LCAbyg-værdien når produktvalget er ukendt,
+    // og denne når der reelt stilles EPD-krav i udbuddet.
+    { id:'vindue-trae-alu-3lag-epd-lav', name:'Vindue træ/alu m. udv. alubeklædning · fuld opbygning · 3-lags rude · produkt-EPD lavCO₂ · 39,5 kg/m² · 48 kg CO₂e/m² (Ripple/Velfac 200 Energy) · LcaS', unit:'kg', gwp:1.220 }, // 121.612 kg → 148.360 kg CO₂e A1-3
+    { id:'vindue-trae-3lag-lcabyg',     name:'vindue: Træ · fuld opbygning · 3-lags · LCAbyg',            unit:'kg', gwp:1.404 }, // RETTET v0.20.5 (var 2,808, hierarkisk dobbelttælling): LCAbyg-eksport A1-3 = 37,4 kg/m² × 1,404 = 52,6 kg CO₂e/m²
+    { id:'vindue-plast-3lag-lcabyg',    name:'vindue: Plast/PVC · fuld opbygning · 3-lags · LCAbyg',      unit:'kg', gwp:2.384 }, // RETTET v0.20.5 (var 4,5, hierarkisk dobbelttælling): LCAbyg-eksport A1-3 = 48,2 kg/m² × 2,384 = 114,8 (karm plast + 3-lags rude) kg CO₂e/m²
+    { id:'vindue-alu-3lag-lcabyg',      name:'vindue: Aluminium · fuld opbygning · 3-lags · LCAbyg',      unit:'kg', gwp:3.965 }, // RETTET v0.20.5 (var 8,5, hierarkisk dobbelttælling): LCAbyg-eksport A1-3 = 39,8 kg/m² × 3,965 = 157,9 (karm alu + 3-lags rude) kg CO₂e/m²
+    { id:'vindue-fladtag-plast-lcabyg', name:'vindue: Fladtagsvindue · fuld opbygning · plast · LCAbyg',   unit:'kg', gwp:3.135 }, // RETTET v0.20.5 (var 6,269, hierarkisk dobbelttælling): LCAbyg-eksport A1-3 = 72,1 kg/m² × 3,135 = 226,0 kg CO₂e/m²
+    { id:'vindue-glastag-alu-lcabyg',   name:'vindue: Glastag/ovenlys · fuld opbygning · alu · LCAbyg',    unit:'kg', gwp:3.754 }, // RETTET v0.20.5 (var 7,508, hierarkisk dobbelttælling): LCAbyg-eksport A1-3 = 61,8 kg/m² × 3,754 = 232,0 kg CO₂e/m²
+    { id:'traeplade-finish',    name:'Træplade · finish · indvendig · LcaS',                  unit:'kg', gwp:0.15 },
     // Byggesystem-presets til Midterdel (struktur+isolering, evt. inkl. beklædning).
     // Brug med Yderside = Intet, hvis beklædning allerede er bundlet — ellers
     // dobbelttælling. Adskiller sig fra tynde beklædningspresets under Yderside.
@@ -1557,7 +1851,27 @@
     // langt mere biogent. Brug som Midterdel; vælg separat Yderside-
     // beklædning (eller Intet), når det er relevant.
     { id:'traeskeletvaeg-uden-beklaedning', name:'Lisbjerg: Trærammevæg · struktur+isolering · uden beklædning', unit:'kg', gwp:-0.7554, giveback:158, biogenicKg:1.1935 },
-    { id:'clt-daek-etage', name:'LcaS: CLT bærende+dæk · fuld opbygning · letvægskonstruktion · blandet', unit:'kg', gwp:-0.45, giveback:400, biogenicKg:1.8 },  // blandet forsamling, se note
+    // GENKALIBRERET v0.20.3: biogenicKg 1,80 → 0,99 (giveback 400% → 220%).
+    // 1,80 var ét af KUN TRE presets med et gættet giveback (de øvrige 42 har
+    // biogenicKg udledt direkte af LCAbyg-eksporter); footeren beskrev selv
+    // 400% som "en forsigtig mellemværdi ... da det stadig kun er ét datapunkt".
+    // Ripple PF (rå LCAbyg-eksport, 1.591.338 kg CLT+betonoverbeton-dæk) giver
+    // et reelt måletal: (C3+C4)/masse = 0,986 kg CO₂e/kg. Krydstjek: 62% af
+    // dækkets masse er CLT; 0,62 × clt-massivtræs 1,474 = 0,91 — samme
+    // størrelsesorden, så tallet er fysisk konsistent. Sanity: 1,80 lå OVER
+    // rent massivtræs egen biogenicKg (1,474), hvilket er umuligt for en
+    // BLANDET forsamling, der pr. definition indeholder ikke-biogent materiale.
+    // Placerer sig nu korrekt mellem de to data-udledte nabo-presets:
+    // etagedaek-hybrid-trae-beton (0,379) og etagedaek-traeelement (1,476).
+    // NYT v0.21.0 — lukker det dokumenterede hul "CLT-dæk med betonoverbeton".
+    // Fuldt målt fra Ripple PF (rå LCAbyg-eksport): 1.591.338 kg over 11.702 m²
+    // dækareal = 136 kg/m². Sammensætning: 84,5 kg/m² CLT + 43,5 kg/m² beton
+    // (Unigreen P25 m. FutureCEM) + 4,0 stålplade + 3,9 armering.
+    // A1-3 = −1.206.030 kg CO₂e → −0,7579/kg. C3+C4 = 1.568.416 → biogenicKg
+    // 0,9856. Alle tre tal er MÅLT, ikke afledt. Placerer sig som forventet
+    // mellem etagedaek-hybrid-trae-beton (221 kg/m²) og clt-daek-etage (62).
+    { id:'etagedaek-clt-overbeton', name:'Etagedæk CLT m. betonoverbeton · fuld opbygning · 84 kg/m² CLT + 44 kg/m² beton + armering · 136 kg/m² · lyd-/brandkorrekt (Ripple) · LcaS', unit:'kg', gwp:-0.758, giveback:130, biogenicKg:0.986 },
+    { id:'clt-daek-etage', name:'CLT bærende+dæk · fuld opbygning · letvægskonstruktion · blandet · LcaS', unit:'kg', gwp:-0.45, giveback:220, biogenicKg:0.99 },  // biogenicKg kalibreret til Ripple PF
     // Kilde: rå LCAbyg-eksport af Eksempelbiblioteket 2023's Terrændæk- og
     // Etagedæk-kategorier (native model+results-format, ikke PDF-aflæsning)
     // — 36 konstruktioner med eksakt masse og A1-A3-GWP pr. m² (construction_
@@ -1597,7 +1911,7 @@
     { id:'loft-perforeret-staal',         name:'loft: Perforeret stål · fuld opbygning · nedhængt · LCAbyg', unit:'kg', gwp:2.2258 },
     { id:'loft-traebeton-nedhaengt',      name:'loft: Træbeton · fuld opbygning · nedhængt · LCAbyg', unit:'kg', gwp:0.0548 },
     { id:'loft-brandgips-lejlighedsskel', name:'loft: Brandgips · ren · lejlighedsskel · LCAbyg', unit:'kg', gwp:0.2734 },
-    { id:'kalkpuds',            name:'LcaS: Kalkpuds · finish · indvendig',           unit:'kg', gwp:0.20 },
+    { id:'kalkpuds',            name:'Kalkpuds · finish · indvendig · LcaS',           unit:'kg', gwp:0.20 },
     // ---- "indv-"-præfiks: indvendige overfladepresets fra rå LCAbyg-
     // eksport af Ydervægges Vægside/Inderside-kategori (samme datakilde som
     // facadebeklædningen ovenfor). Ligesom de eksisterende presets i denne
@@ -1733,7 +2047,8 @@
     'terraendaek-isolering': ['intet', 'eps', 'traefiber-isolering', 'terraendaek-isol-eps150-grus', 'terraendaek-isol-eps350-singels', 'terraendaek-isol-eps360-grus', 'terraendaek-isol-eps400-grus', 'terraendaek-isol-skumglas-stabilgrus'],
     baerende:             ['intet', 'beton-elem', 'stal-konstr', 'trae-konstr', 'clt-massivtrae', 'clt-daek-etage', 'baerende-beton-let', 'baerende-beton-standard', 'baerende-komposit-staal-beton', 'baerende-trae-i-bjaelke'],
     'baerende-brand':     ['intet', 'baerende-ingen-brand', 'baerende-brandbeklaedning'],
-    etagedaek:            ['intet', 'etagedaek-intet', 'etagedaek-huldaek', 'etagedaek-letbeton', 'etagedaek-pladsstoebt', 'etagedaek-traeelement', 'etagedaek-traeelement-indskud', 'etagedaek-gulvbjaelke', 'etagedaek-hybrid-trae-beton', 'etagedaek-staal-plade', 'beton-elem', 'stal-konstr', 'trae-konstr', 'clt-massivtrae', 'clt-daek-etage'],
+    'kaeldervaeg':        ['beton-insitu-armeret', 'fund-plade-kaelder-tung', 'beton-insitu', 'beton-lavco2', 'intet'],
+    etagedaek:            ['intet', 'etagedaek-intet', 'etagedaek-huldaek', 'etagedaek-letbeton', 'etagedaek-pladsstoebt', 'etagedaek-traeelement', 'etagedaek-traeelement-indskud', 'etagedaek-gulvbjaelke', 'etagedaek-hybrid-trae-beton', 'etagedaek-staal-plade', 'beton-elem', 'stal-konstr', 'trae-konstr', 'clt-massivtrae', 'clt-daek-etage', 'etagedaek-clt-overbeton'],
     loft:                 ['intet', 'loft-intet', 'loft-akrylmaling', 'loft-gipsplader-traelaegter', 'loft-gipsplader-staalprofiler', 'loft-systemloft', 'loft-akustikpaneler', 'loft-fibercement', 'loft-braedde', 'loft-traelameller', 'loft-mod-uopvarmet', 'loft-isoleret-frit', 'loft-perforeret-staal', 'loft-traebeton-nedhaengt', 'loft-brandgips-lejlighedsskel'],
     'facade-beklaedning': ['intet', 'tegl', 'alu', 'traebeklaedning-facade', 'fibercement', 'natursten-facade', 'kalksandsten-facade', 'aluminiumspaneler-facade', 'skaermtegl-facade', 'plast-traekomposit-facade', 'traebeklaedning-laerk-facade', 'betonelement-forplade-facade', 'traebeklaedning-naaletrae-facade', 'skifer-trae-facade', 'skifer-alu-facade', 'skaermtegl-alu-facade', 'zink-traelaegter-facade', 'zink-alu-facade', 'teglstensformur-facade', 'genbrugstegl', 'genbrugstegl-formur-facade'],
     // Midterdel = bærende kerne (+ isolering). Bundlede træ-/præfab-vægge
@@ -1742,7 +2057,7 @@
     'facade-midterdel': ['intet', 'facade-midterdel-beton-let', 'facade-midterdel-beton-tung', 'facade-midterdel-letbeton', 'facade-midterdel-clt', 'facade-midterdel-traeelement-mineraluld', 'facade-midterdel-traeelement-papiruld', 'facade-midterdel-traeskelet-let', 'facade-midterdel-traeskelet-tung', 'facade-midterdel-halmvaegge', 'facade-midterdel-porebeton', 'facade-midterdel-teglblok-isoleret', 'facade-midterdel-staalskelet', 'facade-midterdel-staal-sandwich', 'traeskeletvaeg-uden-beklaedning', 'traekonstruktion-letvaeg-ydervaeg', 'praefab-traeelement-facade'],
     tag:                  ['intet', 'tagkonstruktion-let', 'tagkonstruktion-tung', 'tag-flad-trae-ventileret', 'tag-flad-trae-uventileret', 'tag-flad-bjaelkespaer-mineraluld', 'tag-flad-gitterspaer-let', 'tag-flad-clt', 'tag-flad-letbeton', 'tag-flad-pladsstoebt', 'tag-flad-huldaek', 'tag-flad-staaldaek', 'tag-sadel-traespaer-hanebaand', 'tag-sadel-gitterspaer-isoleret'],
     tagbeklaedning:       ['intet', 'tagbekl-tegl', 'tagbekl-zink', 'tagbekl-betontagsten', 'tagbekl-epdm', 'tagbekl-groent', 'tagbekl-fibercement', 'tagbekl-skifer', 'tagbekl-straa', 'tagbekl-stal-trapez', 'tagbekl-tagpap', 'tagpap', 'tag-groent'],
-    vinduer:              ['intet', 'glas', 'vinduer-fuld', 'vindue-trae-3lag-lcabyg', 'vindue-trae-alu-3lag-lcabyg', 'vindue-plast-3lag-lcabyg', 'vindue-alu-3lag-lcabyg', 'vindue-fladtag-plast-lcabyg', 'vindue-glastag-alu-lcabyg'],
+    vinduer:              ['intet', 'glas', 'vinduer-fuld', 'vindue-trae-3lag-lcabyg', 'vindue-trae-alu-3lag-lcabyg', 'vindue-trae-alu-3lag-epd-lav', 'vindue-plast-3lag-lcabyg', 'vindue-alu-3lag-lcabyg', 'vindue-fladtag-plast-lcabyg', 'vindue-glastag-alu-lcabyg'],
     indvendigt:           ['intet', 'gips', 'letvaegs-indervaeg', 'clt-indervaeg', 'beton-vaegelement', 'traeplade-finish', 'kalkpuds', 'indv-gipsplade-1lag', 'indv-gipsplade-2lag', 'indv-brandgips-1lag', 'indv-brandgips-2lag', 'indv-brandgips-3lag', 'indv-braeddebeklaedning', 'indv-krydsfiner-gips', 'indv-ler-hampplade', 'indv-maling-akryl', 'indv-puds-kalk-silikat', 'indv-vaadrum-let', 'indv-vaadrum-tung', 'indv-efterisolering-mineraluld', 'indv-efterisolering-porebeton', 'indv-puds-ler', 'indervaeg-beton-let', 'indervaeg-beton-tung', 'indervaeg-letbeton', 'indervaeg-porebeton', 'indervaeg-teglsten-baerende', 'indervaeg-teglblokke-baerende', 'indervaeg-lersten', 'indervaeg-clt-baerende', 'indervaeg-clt-ikke-baerende', 'indervaeg-traeskelet-baerende-mineraluld', 'indervaeg-traeskelet-ikke-baerende-traefiber', 'indervaeg-lejlighedsskel', 'indervaeg-staalskelet-mineraluld', 'indervaeg-staal-sandwich', 'indervaeg-glasvaeg', 'indervaeg-glasvaeg-ei30'],
     'indv-vaegside':       ['intet', 'indv-gipsplade-1lag', 'gips', 'kalkpuds', 'indv-gipsplade-2lag', 'indv-brandgips-1lag', 'indv-brandgips-2lag', 'indv-brandgips-3lag', 'indv-braeddebeklaedning', 'indv-krydsfiner-gips', 'indv-ler-hampplade', 'indv-maling-akryl', 'indv-puds-kalk-silikat', 'indv-vaadrum-let', 'indv-vaadrum-tung', 'indv-puds-ler'],
     'indv-midterdel-baerende': ['intet', 'indervaeg-intet', 'indervaeg-beton-let', 'indervaeg-beton-tung', 'indervaeg-letbeton', 'indervaeg-teglsten-baerende', 'indervaeg-teglblokke-baerende', 'indervaeg-clt-baerende', 'indervaeg-traeskelet-baerende-mineraluld', 'beton-vaegelement', 'clt-indervaeg'],
@@ -1751,7 +2066,7 @@
     gulvbelaegning:       ['intet', 'gulv-parket-limet', 'gulv-parket-svoemmende', 'gulv-parket-eps-beton', 'gulv-traegulv-stroer', 'gulv-linoleum', 'gulv-vinyl', 'gulv-taeppe', 'gulv-gummi', 'gulv-klinker', 'gulv-natursten', 'gulv-beton-slidlag', 'gulv-vaadrum-klinker', 'gulv-vaadrum-vinyl'],
     installationer:       ['intet', 'installation-let', 'installation-middel', 'installation-tung', 'installation-lcabyg-enfamiliehus', 'installation-lcabyg-raekkehus', 'installation-lcabyg-etagebolig', 'installation-lcabyg-kontor-skole', 'installation-lcabyg-oevrige'],
     elevator:             ['intet', 'elevator-skakt-samlet', 'solceller-etage'],
-    'altan-bund':         ['intet', 'altan-bund-betonbund-armeret', 'altan-bund-staal-trae', 'altan-bund-staal-fiberbeton', 'altan-bund-staal-alu', 'altan-bund-alu-trae', 'altan-altangang-beton', 'altan-altangang-staal'],
+    'altan-bund':         ['intet', 'altan-bund-betonbund-armeret', 'altan-bund-staal-trae', 'altan-bund-staal-fiberbeton', 'altan-bund-staal-alu', 'altan-bund-alu-trae', 'altan-altangang-beton', 'altan-altangang-staal', 'altan-bund-staal-trae-ripple'],
     'altan-fastgoerelse': ['intet', 'altan-fast-konsoller', 'altan-fast-indspaending-etagedaek', 'altan-fast-indspaending-mur', 'altan-fast-kort-facadeprofil', 'altan-fast-lang-facadeprofil', 'altan-fast-bardun', 'altan-fast-galger', 'altan-fast-soejler-forkant'],
     'altan-raekvaerk':    ['intet', 'altan-raekvaerk-staal', 'altan-raekvaerk-alu', 'altan-raekvaerk-glas-rustfri'],
   };
@@ -1792,7 +2107,7 @@
   // gemt/importeret fil stadig har ældre standardværdier, som ikke længere
   // matcher værktøjets nuværende bedste gæt (se footer-note om kalibrering).
   const DEFAULT_MODULE_VALUES = {
-    a4a5pct: 25, b4pct: 45, c3c4pct: 30, biogenicGivebackPct: 100,
+    a4a5pct: 25, b4pct: 29, c3c4pct: 30, biogenicGivebackPct: 100,
     dPct: 55, // Modul D ≈ -55% af C3-C4 (kalibreret til Sophushaven EB-05, ét
               // datapunkt). D rapporteres SEPARAT jf. §297 og indgår IKKE i
               // grænseværdital jf. §298. Se footer-note.
@@ -1805,9 +2120,22 @@
   // det globale b4pct-tillæg. Tidligere blev B4 = b4pct × Σ|A1-A3| for ALLE
   // kategorier — det straffede biogen bærende konstruktion (stor |impact|)
   // selv om konstruktionstræ/beton typisk ikke udskiftes i perioden.
-  // ÅBENT (Å1): default b4pct=45 stammer fra ét LCAbyg-projekt målt mod
-  // uvægtet Σ|A1-A3| (før denne vægtning). Tal er IKKE genberegnet til den
-  // nye vægtede base — gør det kun med samme projekts rå B4, ikke ved gæt.
+  // LUKKET v0.20.3 (var ÅBENT Å1): default b4pct=45 stammede fra ét LCAbyg-
+  // projekt målt mod UVÆGTET Σ|A1-A3| og blev aldrig genberegnet, da den
+  // vægtede base blev indført — så 45% blev anvendt på en base, den ikke var
+  // kalibreret til. Noten krævede eksplicit et projekts RÅ B4, ikke et gæt.
+  // Ripple PF (rå LCAbyg-eksport) leverer netop det: reel B4 = 439.327 kg mod
+  // en vægtet base (projektets egne |A1-A3| × andelene nedenfor) på
+  // 1.528.479 kg → 28,7%, afrundet til 29. Med 45% ramte værktøjet 687.815 kg,
+  // dvs. 57% for højt. ÉT datapunkt — men mod den KORREKTE base, hvor 45% var
+  // mod en anden base; metodisk et klart fremskridt, ikke en finpudsning.
+  // Krydstjek af andelene nedenfor mod Ripples reelle B4 pr. kategori: facade,
+  // indervægge og gulv har alle B4 = 0 (CLT/fibergips har 80-100 års levetid
+  // > RSP på 50 år), mens hele den reelle B4 sidder i installationer (188 t),
+  // vinduer (154 t) og elevator (71 t). Andelene på 1,0 for facade/indervægge/
+  // gulv er derfor stadig for høje for TRÆbyggeri specifikt; de er bevidst
+  // IKKE ændret her, da ét trædomineret projekt ikke er grundlag nok til at
+  // omskrive andele, der også skal gælde puds-/malingsbaserede bygninger.
   const B4_CATEGORY_REPLACEMENT_SHARE = {
     fundament: 0,
     terraendaek: 0,
@@ -1868,8 +2196,23 @@
   // (fjernvarme, dansk gennemsnit). Bemærk: energirammen er en LOVGRÆNSE for
   // nybyggeri, ikke faktisk forbrug — erhverv med højt teknik-/IT-forbrug
   // (§260 stk.3) bruger typisk mere; indtast egne Be18/Be23-tal for præcision.
+  // RETTET v0.20.3: bolig-andelen 0,55 → 1,00 (erhverv uændret 0,35).
+  // v0.20.1's 55/45-split for boliger var en REGRESSION: den blev indført for
+  // at rette kontorer (som reelt HAR tung fjernvarme, ~3,6 kg CO₂e/m²/år), men
+  // hævede samtidig bolig-tallet fra 1,50 til 1,91 — og 1,50 var netop den
+  // værdi, der før v0.20.1 var valideret til ±3% mod etage-referencerne.
+  // Alle TRE tilgængelige etage-referencer har fjernvarme-bidrag på præcis 0:
+  // Sophushaven EB-05 (1,27), RH-03 Tankefuld (1,85) og Ripple PF (0,53) —
+  // gennemsnit 1,22. Årsagen varierer (Ripple har jordvarmepumpe = reelt
+  // el-drift; de øvrige rammer nul via BR18's grønne fjernvarme-fremskrivning),
+  // men UDFALDET er konsistent: dansk boligbyggeri beregnet efter BR18 lander
+  // el-domineret. 1,00 giver 1,50 — stadig over gennemsnittet på 1,22, hvilket
+  // er forventeligt, da kWh-basen er energirammen (en LOVGRÆNSE), ikke faktisk
+  // forbrug i lavenergiprojekter. parcelhus/sommerhus arver bolig-andelen uden
+  // egne datapunkter (ekstrapoleret). Et boligprojekt med konventionel, ikke-
+  // fremskrevet fjernvarme bør overstyre varme-feltet manuelt.
   function getB6ElShare(buildingType){
-    return BOLIG_TYPES.includes(buildingType) ? 0.55 : 0.35;
+    return BOLIG_TYPES.includes(buildingType) ? 1.00 : 0.35;
   }
   function getDefaultB6Split(g){
     const totalKwh = getDefaultB6Kwh(g);
@@ -1960,6 +2303,68 @@
   // deck: etagedæk-default — må IKKE arve baerende blindt (beton-elem ≠
   // huldæk-GWP; trae-konstr ≠ bjælkelags-dæk). Kontor havde tidligere
   // deck:'beton-elem' af samme grund (Pakhusene: stål-bæring + betondæk).
+  // ================= LET (TRÆ) KONSTRUKTIONSVARIANT — v0.21.0 =================
+  // TYPE_DEFAULTS ovenfor repræsenterer TUNG/STANDARD konstruktion (beton,
+  // stål, tegl) og er kalibreret på tunge referencer. LIGHT_TYPE_DEFAULTS er
+  // et DELVIST overlay: kun de felter, der reelt ændrer sig ved et træbaseret
+  // bæresystem. Geometri (windowRatio) ændres IKKE — den er uafhængig af,
+  // hvad bygningen er bygget af.
+  //
+  // DATAGRUNDLAG PR. TYPE — LÆS DETTE FØR BRUG. Kvaliteten er meget forskellig:
+  //
+  //   etage  = MÅLT. Ripple PF (rå LCAbyg model+results, 14.042 m², 6 etager,
+  //            vægbårent CLT). wallBearingResidual og interiorIntensity er
+  //            GWP-kalibreret efter værktøjets egen konvention: intensitet =
+  //            reel A1-3 pr. m² GFA / det lette default-materiales gwp.
+  //            Bærende (kun bjælker, resten bæres af væggene): −1,141 kg
+  //            CO₂e/m² / −1,42 (trae-konstr) = 0,80. Indervægge: −41,71 /
+  //            −0,52 (clt-indervaeg) = 80.
+  //
+  //   kontor = SVAGT MÅLT. Innovation Campus (KIRKBI, 49.444 m², 85% limtræ/
+  //            CLT i søjler+bjælker). structureIntensity = 43 kg/m², den
+  //            direkte målte masse (2.137.541 kg / 49.444 m²). Bemærk at
+  //            kilden kun er en PDF med SUMMEREDE moduler, ikke rå eksport —
+  //            massen er pålidelig, men der findes ingen isoleret A1-3 at
+  //            GWP-kalibrere mod. Bekræftende sammenfald: Pakhusenes rene
+  //            STÅLskelet måler 43,0 kg/m², dvs. et trækontor og et stålkontor
+  //            lander på samme massetæthed — samme observation, der i v0.20.2
+  //            forankrede BAERENDE_MATERIAL_FACTOR['trae-konstr'].
+  //
+  //   parcelhus og institution = AFLEDT, IKKE MÅLT. Der findes ingen lette
+  //            referenceprojekter for disse to typer. Værdierne er deres egne
+  //            tunge tal skaleret med de forhold, der er MÅLT for etage/kontor:
+  //            bærende ×0,43 (kontor 43/100), vægbærende rest ×0,36 (etage
+  //            0,80/2,23), indervægge ×1,57 (etage 80/51 — forholdet er >1,
+  //            fordi pseudo-massen skifter fra gips-kalibreret til CLT, og CLT
+  //            fysisk vejer mere; GWP'en falder alligevel, fordi clt-indervaeg
+  //            er stærkt negativ). Behandl disse to som størrelsesordener.
+  //            Erstat med reelle eksporter, når de kan skaffes.
+  const LIGHT_TYPE_DEFAULTS = {
+    parcelhus:   { baerende:'trae-konstr', deck:'etagedaek-traeelement', beklaedning:'traebeklaedning-facade', structureIntensity:95,  interiorIntensity:67,  wallBearingResidual:5.4 },
+    etage:       { baerende:'trae-konstr', deck:'etagedaek-clt-overbeton', beklaedning:'traebeklaedning-facade', structureIntensity:138, interiorIntensity:80,  wallBearingResidual:0.80 },
+    kontor:      { baerende:'trae-konstr', deck:'etagedaek-clt-overbeton', beklaedning:'traebeklaedning-facade', structureIntensity:43,  interiorIntensity:110, wallBearingResidual:5.4 },
+    institution: { baerende:'trae-konstr', deck:'etagedaek-clt-overbeton', beklaedning:'traebeklaedning-facade', structureIntensity:129, interiorIntensity:75,  wallBearingResidual:0.12 }
+  };
+  // Datagrundlags-mærkat pr. type — vises i UI'et, så brugeren kan se hvor
+  // stærkt tallet er, uden at skulle læse koden.
+  const LIGHT_BASIS = {
+    etage:'målt (Ripple PF, rå eksport)', kontor:'svagt målt (Innovation Campus, kun masse)',
+    parcelhus:'afledt — ingen let reference', institution:'afledt — ingen let reference'
+  };
+  const TAG_MATERIAL_BY_TYPE_LIGHT = {
+    parcelhus:'tagkonstruktion-let', etage:'tag-flad-trae-uventileret',
+    institution:'tag-flad-trae-uventileret', kontor:'tag-flad-trae-uventileret'
+  };
+  // Slår tung/let sammen til ét opslag. weight==='let' og typen har et overlay
+  // → flet; ellers uændret TYPE_DEFAULTS (fuld bagudkompatibilitet).
+  function getTypeDef(buildingType, weight){
+    const base = TYPE_DEFAULTS[buildingType] || TYPE_DEFAULTS.parcelhus;
+    if(weight !== 'let') return base;
+    const ov = LIGHT_TYPE_DEFAULTS[buildingType];
+    return ov ? Object.assign({}, base, ov) : base;
+  }
+  function typeDefOf(g){ return getTypeDef(g.buildingType, g && g.constructionWeight); }
+
   const TYPE_DEFAULTS = {
     parcelhus:   { baerende:'trae-konstr', deck:'etagedaek-gulvbjaelke', beklaedning:'tegl',        windowRatio:0.18, structureIntensity:220, interiorIntensity:43, wallBearingResidual:15 },
     // windowRatio 0,38: Kongebro ~0,43 / Nordland ~0,42 af afledt facade — 0,25 var for lavt.
@@ -2174,8 +2579,8 @@
   // massetæthed, så mængdekolonnen er kg (som øvrige kats) og m² vises som
   // geom-hint. Impact = areal × GWP/m² bevares (gwp/kg = GWP/m² ÷ densitet).
   const WINDOW_MATERIAL_DENSITY = {
-    glas: 15, 'vinduer-fuld': 50, 'vindue-trae-alu-3lag-lcabyg': 40, 'vindue-trae-3lag-lcabyg': 37,
-    'vindue-plast-3lag-lcabyg': 45, 'vindue-alu-3lag-lcabyg': 42, 'vindue-fladtag-plast-lcabyg': 72, 'vindue-glastag-alu-lcabyg': 62,
+    glas: 15, 'vinduer-fuld': 50, 'vindue-trae-alu-3lag-lcabyg': 40, 'vindue-trae-alu-3lag-epd-lav': 39.5, 'vindue-trae-3lag-lcabyg': 37,
+    'vindue-plast-3lag-lcabyg': 48, 'vindue-alu-3lag-lcabyg': 40, 'vindue-fladtag-plast-lcabyg': 72, 'vindue-glastag-alu-lcabyg': 62,
   };
   // ~7 kg/m² GFA — størrelsesorden fra Lisbjerg (varme+el+vent+vand+afløb).
   const INSTALLATION_MATERIAL_DENSITY = {
@@ -2194,13 +2599,34 @@
     parcelhus: 0, sommerhus: 0, kontor: 0, institution: 0,
     etage: 0.070,
   };
+  // LET variant v0.21.3. Altanareal er en ARKITEKTONISK beslutning, ikke en
+  // konsekvens af bæresystemet — men de to lette referencer ligger empirisk
+  // markant lavere end de to tunge, og forskellen er for stor til at ignorere:
+  //   tung:  Kongebro 330/4.280 = 0,077 · Nordland 96/1.467 = 0,065  → 0,070
+  //   let:   Lisbjerg ≈ 0,020   · Ripple PF 592/14.042 = 0,0422      → 0,031
+  // Bemærk at de to lette datapunkter afviger indbyrdes med en faktor 2 —
+  // spredningen er reel og stor. 0,031 er derfor et MIDTPUNKT med betydelig
+  // usikkerhed, ikke et facit, og der er ingen fysisk årsagssammenhæng mellem
+  // konstruktionsvægt og altanareal; sammenhængen er rent observeret på n=2.
+  // For et konkret projekt bør altanrækken sættes i Manuel-tilstand med det
+  // projekterede altanareal — det er langt mere præcist end nogen typologisk sats.
+  const ALTAN_AREA_RATIO_BY_TYPE_LIGHT = { etage: 0.031 };
   // Fastgørelse: biblioteket er pr. stk. Antag 0,5 stk pr. m² altan
   // (≈ 2 konsoller på en 4 m² Ripple-ref-altan). Densitet = mass_stk × 0,5.
   const ALTAN_FASTENING_PER_M2 = 0.5;
   // Rækværk: biblioteket er pr. m. Antag 0,5 m rækværk pr. m² altan
   // (frontkant på ca. 2 m dyb altan). Densitet = mass_m × 0,5.
   const ALTAN_RAILING_M_PER_M2 = 0.5;
+  // NYT v0.21.3 — måltalspreset fra Ripple PF, ved siden af biblioteksværdien.
+  // Ripples "Stålaltan (3,9 m² ref)": 151,8 stk × 3,9 m² = 592 m² altanbund,
+  // 72.620 kg → 123 kg/m², A1-3 98.391 kg CO₂e → 1,355 kg CO₂e/kg.
+  // Densiteten rammer bibliotekets altan-bund-staal-trae (123) PRÆCIS — samme
+  // fysiske altantype — men bibliotekets gwp (0,965) er 29% lavere end det
+  // reelle produktmiks (ThermoWood + galvaniseret stålplade + valsede profiler
+  // + varmvalset stålbånd). Biblioteksværdien er IKKE ændret; brug den ved
+  // ukendt produktvalg og denne, når altanen er en projekteret stålaltan.
   const ALTAN_BUND_DENSITY = {
+    'altan-bund-staal-trae-ripple': 123,
     'altan-bund-betonbund-armeret': 372, 'altan-bund-staal-trae': 123,
     'altan-bund-staal-fiberbeton': 154, 'altan-bund-staal-alu': 107,
     'altan-bund-alu-trae': 50, 'altan-altangang-beton': 476, 'altan-altangang-staal': 46,
@@ -2221,7 +2647,9 @@
     'altan-raekvaerk-glas-rustfri': 34.31 * ALTAN_RAILING_M_PER_M2,
   };
   function getAltanArea(g){
-    const ratio = ALTAN_AREA_RATIO_BY_TYPE[g.buildingType];
+    const light = g && g.constructionWeight === 'let';
+    const lightRatio = light ? ALTAN_AREA_RATIO_BY_TYPE_LIGHT[g.buildingType] : undefined;
+    const ratio = lightRatio !== undefined ? lightRatio : ALTAN_AREA_RATIO_BY_TYPE[g.buildingType];
     return g.heatedArea * (ratio !== undefined ? ratio : 0);
   }
   // Indervægge — "Midterdel"-baserede presets (rå LCAbyg-eksport, 118
@@ -2316,7 +2744,21 @@
     'traekonstruktion-letvaeg-ydervaeg': 188, // Ripple: struktur+isolering+beklædning (sæt Yderside=Intet)
     'praefab-traeelement-facade': 50,        // Markhaven: præfab inkl. Heatwood (sæt Yderside=Intet)
   };
-  const BASEMENT_WALL_DENSITY = 300;   // kg beton / m² kældervæg
+  // GENKALIBRERET v0.21.2: 300 → 765 kg/m² kældervæg.
+  // 300 var et udokumenteret skøn (ingen proveniensnote) og svarer til kun
+  // 125 mm beton — urealistisk tyndt for en jordtrykspåvirket kældervæg, hvor
+  // 250-300 mm er normalen. Ripple PF (rå LCAbyg-eksport) giver et måletal:
+  // "Kælderydervægge" vejer 444.016 kg (405.562 beton M30 FutureCEM + 30.282
+  // armering + 4.711 XPS + 3.461 bentonit-vandtætning). Mod værktøjets egen
+  // vægarealmodel (fodaftryk 2.340 m² → perimeter 194 m × 3 m × 1 kælderetage
+  // = 581 m²) giver det 765 kg/m², svarende til ~319 mm beton — hvilket passer
+  // med en vandtrykssikret P-kældervæg. ÉT datapunkt, men mod en værdi der
+  // slet ikke havde et.
+  const BASEMENT_WALL_DENSITY = 765;   // kg/m² kældervæg (Ripple PF, målt)
+  // Kældervæg-densitet pr. preset. Alle nuværende valg er massiv beton, så de
+  // deler den målte 765 kg/m²; dict'en findes, så et fremtidigt letbeton-/
+  // element-preset kan få sin egen uden kodeændring andre steder.
+  const KAELDERVAEG_MATERIAL_DENSITY = {};
   // P-kælder (checkbox): bundplade + dæk over P. Masse kalibreret mod tung
   // P-opbygning (Nordland ~1827 kg/m² P-gulv; fund-plade-kaelder-tung 1839) —
   // tidligere 720 (~300 mm ren plade) undervurderede reel P-bund markant.
@@ -2400,7 +2842,8 @@
     'etagedaek-traeelement': 22,        // bibliotek ~34 → 0,094×
     'etagedaek-traeelement-indskud': 42, // Sophushaven EB-05 etagedæk MINUS parket-toplag (gulvbelægning dækkes af egen kategori): 51,4 rå − 9,1 parket = 42,3 kg/m². Krydsfiner-underplade (7,2) BLIVER (konstruktiv).
     'etagedaek-gulvbjaelke': 15,        // bibliotek ~22 → 0,062×
-    'etagedaek-hybrid-trae-beton': 221, // bibliotek ~335 → 0,923×
+    'etagedaek-hybrid-trae-beton': 221,
+    'etagedaek-clt-overbeton': 136,   // MÅLT: Ripple PF 1.591.338 kg / 11.702 m² dækareal // bibliotek ~335 → 0,923×
     'beton-elem': 240,                  // generisk præfab ≈ huldæk-familien
     'clt-daek-etage': 62,               // bibliotek CLT-dæk ~94 → 0,259×
     'clt-massivtrae': 62,
@@ -2463,6 +2906,29 @@
   };
 
   // Lag-defaults der ikke allerede dækkes af TYPE_DEFAULTS / TAG_*_BY_TYPE.
+  // Lag-overstyringer for LET konstruktion. De lagdelte kategorier (Ydervægge,
+  // Indervægge) beregnes ALTID som summen af deres lag — det er derfor ikke nok
+  // at skifte kategoriens hovedmateriale; midterdelen (den bærende kerne) skal
+  // også skifte fra beton til træ/CLT, ellers ville en "let" bygning stadig
+  // have en betonkerne i alle vægge.
+  const LAYER_PRESET_OVERRIDE_BY_TYPE_LIGHT = {
+    parcelhus: {
+      'facade-midterdel': 'facade-midterdel-traeskelet-let',
+      'indv-midterdel-ikke-baerende': 'indervaeg-traeskelet-ikke-baerende-traefiber',
+    },
+    etage: {
+      'facade-midterdel': 'facade-midterdel-clt',
+      'indv-midterdel-ikke-baerende': 'indervaeg-traeskelet-ikke-baerende-traefiber',
+    },
+    kontor: {
+      'facade-midterdel': 'facade-midterdel-clt',
+      'indv-midterdel-ikke-baerende': 'indervaeg-traeskelet-ikke-baerende-traefiber',
+    },
+    institution: {
+      'facade-midterdel': 'facade-midterdel-clt',
+      'indv-midterdel-ikke-baerende': 'indervaeg-traeskelet-ikke-baerende-traefiber',
+    },
+  };
   const LAYER_PRESET_OVERRIDE_BY_TYPE = {
     sommerhus: {
       'facade-midterdel': 'facade-midterdel-traeskelet-let',
@@ -2483,12 +2949,25 @@
 
   // Relativ massefaktor for Bærende konstruktion ift. typens standardmateriale.
   // Stål 0,14 forankret (Pakhusene 43 vs. etage/institution ~300–320).
-  // Træ/komposit 0,45–0,7: ingen projekt-isoleret masse — grove skøn.
+  // 'trae-konstr' REVIDERET v0.20.2: 0,5→0,2, første reelle datapunkt for en
+  // trædomineret KONTORBYGNING (Innovation Campus, KIRKBI, 49.444 m², BR18
+  // kontor-klassificeret). Søjler+bjælker vejer i alt 2.137.541 kg (85%
+  // limtræ/CLT, 15% stål, <0,2% beton) over 49.444 m² opvarmet areal =
+  // 43,2 kg/m² total realmasse — næsten identisk med Pakhusenes rene
+  // stålmasse (43,0 kg/m²), der ankrer stål-faktoren 0,14. Det gamle skøn på
+  // 0,5 (3,6× stål-massen) var UDOKUMENTERET ("ingen projekt-isoleret masse
+  // — grove skøn") og modsiges nu kraftigt af reel data. Sat forsigtigt til
+  // 0,2 (ikke helt ned til stål 0,14): Innovation Campus er en HYBRID
+  // (15% stål bærer en del af lasten), så en ren 100%-trækonstruktion
+  // formodes at kræve noget mere masse end en blandet — men markant mindre
+  // end det gamle 3,6×-skøn. Kilde: PDF-rapportens Bilag 2 "Mængdeskema"
+  // (summerede A1-3+B4+C3-4-tal, IKKE isoleret A1-3 som JYSK/DTU/EC — se
+  // footer-note "Trækontor-kalibrering" for fuld usikkerhedsredegørelse).
   const BAERENDE_MATERIAL_FACTOR = {
     'beton-elem': 1.0, 'baerende-beton-standard': 1.0, 'baerende-beton-let': 0.85,
     'stal-konstr': 0.14, 'baerende-komposit-staal-beton': 0.5,
-    'trae-konstr': 0.5, 'baerende-trae-i-bjaelke': 0.45,
-    'clt-massivtrae': 0.7, 'clt-daek-etage': 0.65,
+    'trae-konstr': 0.2, 'baerende-trae-i-bjaelke': 0.18,
+    'clt-massivtrae': 0.28, 'clt-daek-etage': 0.26,
   };
 
   // Volumetrisk densitet (kg/m³) pr. materiale — bruges når man vil angive en
@@ -2588,7 +3067,7 @@
   }
 
   function getBaerendeIntensity(g, materialId){
-    const typeDef = TYPE_DEFAULTS[g.buildingType] || TYPE_DEFAULTS.parcelhus;
+    const typeDef = typeDefOf(g);
     const principle = g.constructionPrinciple !== '' ? g.constructionPrinciple : (CONSTRUCTION_PRINCIPLE_BY_TYPE[g.buildingType] || 'vaeg');
     const base = principle === 'vaeg' ? typeDef.wallBearingResidual : typeDef.structureIntensity;
     const baseFactor = BAERENDE_MATERIAL_FACTOR[typeDef.baerende] !== undefined ? BAERENDE_MATERIAL_FACTOR[typeDef.baerende] : 1;
@@ -2596,17 +3075,18 @@
     return base * (selectedFactor / baseFactor);
   }
 
-  function defaultMaterialForCategory(type){
-    const t = TYPE_DEFAULTS[type] || TYPE_DEFAULTS.parcelhus;
+  function defaultMaterialForCategory(type, weight){
+    const t = getTypeDef(type, weight);
+    const isLight = (weight === 'let') && !!LIGHT_TYPE_DEFAULTS[type];
     return {
       fundament:'beton-insitu-armeret', terraendaek:'beton-insitu-terraendaek', 'terraendaek-isolering':'eps',
       baerende:t.baerende,
       // Altid eksplicit deck-felt (sat på alle TYPE_DEFAULTS) — undgå at arve
       // baerende-GWP (fx beton-elem 0,087 i stedet for huldæk 0,205).
       etagedaek: t.deck || 'etagedaek-huldaek',
-      'facade-beklaedning':t.beklaedning, tag: TAG_MATERIAL_BY_TYPE[type] || 'tagkonstruktion-tung', vinduer:'vinduer-fuld', indvendigt:'gips',
+      'facade-beklaedning':t.beklaedning, tag: (isLight ? (TAG_MATERIAL_BY_TYPE_LIGHT[type] || TAG_MATERIAL_BY_TYPE[type]) : TAG_MATERIAL_BY_TYPE[type]) || 'tagkonstruktion-tung', vinduer:'vinduer-fuld', indvendigt: isLight ? 'clt-indervaeg' : 'gips',
       gulvbelaegning: (type === 'etage') ? 'gulv-traegulv-stroer' : 'gulv-parket-limet',
-      altaner: (type === 'etage') ? 'altan-bund-betonbund-armeret' : 'intet',
+      altaner: (type === 'etage') ? (isLight ? 'altan-bund-staal-trae-ripple' : 'altan-bund-betonbund-armeret') : 'intet',
       installationer: INSTALLATION_MATERIAL_BY_TYPE[type] || 'installation-let',
       elevator: 'elevator-skakt-samlet'
     };
@@ -2621,6 +3101,25 @@
   // "faktor", der vises i resultatkolonnen, er derfor et vejet gennemsnit
   // (samlet impact / samlet mængde), ikke ét preset-tal.
   const LAYERED_CONFIG = {
+    fundament: {
+      toggleLabel: 'Lagdelt (Fundering + Kældervægge)',
+      // v0.21.2: Fundament rummede hidtil BÅDE selve funderingen og
+      // kældervæggene under ét preset. Det er byggeteknisk to forskellige
+      // ting: en P-bundplade er en FULD OPBYGNING (plade + kapillarbrydende
+      // lag + isolering, 1.839 kg/m²) og skal have et opbygnings-preset, mens
+      // en kældervæg er ren armeret konstruktionsbeton (765 kg/m²). Med ét
+      // fælles preset kunne kun den ene blive rigtig — og da pladen typisk er
+      // ~90% af massen, trak den altid væggene med sig.
+      // alwaysLayered:true efter samme mønster som de øvrige; Kældervægge-laget
+      // giver 0 kg for bygninger uden kælder/P-kælder og er da uden effekt.
+      alwaysLayered: true,
+      layers: [
+        { role:'fundering', label:'Fundering (plade/stribe/punkt/pæl)', presetKey:'fundament', densityDict:{}, densityDefault:1,
+          areaFn: (g, matId) => computeCategoryEstimate('fundament', g, { noBasementExtra:true, matIdOverride:matId }).qty },
+        { role:'kaeldervaegge', label:'Kældervægge', presetKey:'kaeldervaeg', densityDict: KAELDERVAEG_MATERIAL_DENSITY, densityDefault: BASEMENT_WALL_DENSITY,
+          geomUnit: 'm²', areaFn: g => getBasementWallArea(g) },
+      ],
+    },
     baerende: {
       toggleLabel: 'Lagdelt (Bærende konstruktion + Beklædning mod brand)',
       // alwaysLayered:true — samme princip som Terrændæk: ingen "vælg ét
@@ -2725,15 +3224,15 @@
         // preset-tal for nøjagtig samme materiale — den "uoverensstemmelse
         // mellem foldet og udfoldet tilstand", der blev opdaget og rettet.
         { role:'yderside',  label:'Yderside (beklædning)',            presetKey:'facade-beklaedning', densityDict: CLADDING_AREA_DENSITY, densityDefault: 50,
-          geomUnit: 'm²', areaFn: g => getFacadeArea(g).area * (1 - (TYPE_DEFAULTS[g.buildingType] || TYPE_DEFAULTS.parcelhus).windowRatio) },
+          geomUnit: 'm²', areaFn: g => getFacadeArea(g).area * (1 - typeDefOf(g).windowRatio) },
         { role:'midterdel', label:'Midterdel (bærende kerne, inkl. isolering)', presetKey:'facade-midterdel', densityDict: FACADE_MIDTERDEL_DENSITY, densityDefault: 250,
-          geomUnit: 'm²', areaFn: g => getFacadeArea(g).area * (1 - (TYPE_DEFAULTS[g.buildingType] || TYPE_DEFAULTS.parcelhus).windowRatio) },
+          geomUnit: 'm²', areaFn: g => getFacadeArea(g).area * (1 - typeDefOf(g).windowRatio) },
         // "Inderside" (LCAbygs "Vægside") — genbruger samme rå kilde og
         // presetliste som Indervægges Vægside-lag, men ganges her direkte
         // med facadeareal (den native, korrekte enhed for en ydervæg) i
         // stedet for Indervægges GFA×0,2-omregning. Se footer-note.
         { role:'inderside', label:'Inderside (vægside)', presetKey:'indv-vaegside', densityDict: INDV_VAEGSIDE_RAW_DENSITY, densityDefault: 21,
-          geomUnit: 'm²', areaFn: g => getFacadeArea(g).area * (1 - (TYPE_DEFAULTS[g.buildingType] || TYPE_DEFAULTS.parcelhus).windowRatio) },
+          geomUnit: 'm²', areaFn: g => getFacadeArea(g).area * (1 - typeDefOf(g).windowRatio) },
       ],
     },
     altaner: {
@@ -2780,7 +3279,7 @@
       ],
     },
   };
-  function defaultLayerMaterials(catKey, buildingType){
+  function defaultLayerMaterials(catKey, buildingType, weight){
     const cfg = LAYERED_CONFIG[catKey];
     if(!cfg) return {};
     const type = buildingType
@@ -2792,8 +3291,15 @@
     // ratio — men Intet gør intenten tydelig i UI).
     if(catKey === 'altaner'){
       if(type === 'etage'){
+        // RETTET v0.21.1: altan-grenen returnerede FØR vægt-håndteringen, så en
+        // "let" etagebolig fik en armeret betonaltan (372 kg/m² × 1,30 = 484 kg
+        // CO₂e/m²). Stål m. trægulv er 123 kg/m² × 0,965 = 119 — altså ~4x
+        // lettere, og det er netop den type, Ripple PF bruger (stålprofiler +
+        // ThermoWood, reel 1,355 kg CO₂e/kg). Fastgørelse (konsoller, 18,1
+        // kg/m²) og rækværk (stål, 1,125) er allerede de letteste i deres lag
+        // og er derfor uændrede.
         return {
-          bund: 'altan-bund-betonbund-armeret',
+          bund: ((weight === 'let') ? 'altan-bund-staal-trae-ripple' : 'altan-bund-betonbund-armeret'),
           fastgoerelse: 'altan-fast-konsoller',
           raekvaerk: 'altan-raekvaerk-staal',
         };
@@ -2801,18 +3307,20 @@
       return { bund: GENERIC_NONE_ID, fastgoerelse: GENERIC_NONE_ID, raekvaerk: GENERIC_NONE_ID };
     }
 
-    const typeMat = defaultMaterialForCategory(type);
-    const extra = LAYER_PRESET_OVERRIDE_BY_TYPE[type] || {};
+    const typeMat = defaultMaterialForCategory(type, weight);
+    const isLightW = (weight === 'let') && !!LIGHT_TYPE_DEFAULTS[type];
+    const extra = Object.assign({}, LAYER_PRESET_OVERRIDE_BY_TYPE[type] || {},
+      isLightW ? (LAYER_PRESET_OVERRIDE_BY_TYPE_LIGHT[type] || {}) : {});
     const overrides = Object.assign({}, extra);
     if(typeMat['facade-beklaedning']) overrides['facade-beklaedning'] = typeMat['facade-beklaedning'];
     if(typeMat.baerende) overrides.baerende = typeMat.baerende;
     if(typeMat.etagedaek) overrides.etagedaek = typeMat.etagedaek;
     if(typeMat.terraendaek) overrides.terraendaek = typeMat.terraendaek;
-    if(TAG_MATERIAL_BY_TYPE[type]) overrides.tag = TAG_MATERIAL_BY_TYPE[type];
+    if(typeMat.tag) overrides.tag = typeMat.tag;
     if(TAGBEKLAEDNING_BY_TYPE[type]) overrides.tagbeklaedning = TAGBEKLAEDNING_BY_TYPE[type];
     if(catKey === 'indvendigt'){
-      overrides['indv-midterdel-baerende'] = defaultActiveIndervaegBearingMaterial(type);
-      overrides['indv-midterdel-ikke-baerende'] = defaultActiveIndervaegNonBearingMaterial(type);
+      overrides['indv-midterdel-baerende'] = isLightW ? 'indervaeg-clt-baerende' : defaultActiveIndervaegBearingMaterial(type);
+      overrides['indv-midterdel-ikke-baerende'] = isLightW ? 'indervaeg-traeskelet-ikke-baerende-traefiber' : defaultActiveIndervaegNonBearingMaterial(type);
     }
 
     const nonePreferredDefault = { 'baerende-brand': true }; // Intet/ingen ER default for brandlag
@@ -2938,8 +3446,8 @@
     row.layerMaterials.loft = ETAGEDAEK_NONE_LOFT;
   }
 
-  function defaultActiveEtagedaekLayerMaterials(buildingType){
-    const t = TYPE_DEFAULTS[buildingType] || TYPE_DEFAULTS.parcelhus;
+  function defaultActiveEtagedaekLayerMaterials(buildingType, weight){
+    const t = getTypeDef(buildingType, weight);
     const loftPresets = CATEGORY_MATERIAL_PRESETS.loft;
     return {
       daek: t.deck || 'etagedaek-huldaek',
@@ -2997,7 +3505,7 @@
         row.layerMaterials.isolering = row.deferredLayerMaterials.isolering;
         row.deferredLayerMaterials = null;
       } else {
-        Object.assign(row.layerMaterials, defaultLayerMaterials('terraendaek', g.buildingType));
+        Object.assign(row.layerMaterials, defaultLayerMaterials('terraendaek', g.buildingType, g.constructionWeight));
       }
     }
     return true;
@@ -3032,7 +3540,7 @@
         row.layerMaterials.loft = row.deferredLayerMaterials.loft;
         row.deferredLayerMaterials = null;
       } else if(options.restoreDefaultsIfIntet){
-        Object.assign(row.layerMaterials, defaultActiveEtagedaekLayerMaterials(g.buildingType));
+        Object.assign(row.layerMaterials, defaultActiveEtagedaekLayerMaterials(g.buildingType, g.constructionWeight));
       }
     }
     return true;
@@ -3181,6 +3689,7 @@
     return {
       buildingType: document.getElementById('buildingType').value,
       constructionPrinciple: document.getElementById('constructionPrinciple').value,
+      constructionWeight: document.getElementById('constructionWeight').value,
       heatedArea: parseFloat(document.getElementById('heatedArea').value) || 1,
       floorsTotal: parseFloat(document.getElementById('floors').value) || 1,
       floorsAboveGrade: document.getElementById('floorsAboveGrade').value,
@@ -3236,6 +3745,16 @@
     const floorsAbove = g.floorsAboveGrade !== '' ? parseFloat(g.floorsAboveGrade) : g.floorsTotal;
     const height = floorsAbove * getStoreyHeight(g);
     return { area: perimeter * height, refined:false };
+  }
+
+  // Vægarealet alene — bruges af Kældervægge-laget, hvor densiteten kommer fra
+  // det valgte preset i stedet for at være hårdkodet.
+  function getBasementWallArea(g){
+    const basementFloors = getBasementFloorCount(g);
+    if(basementFloors <= 0 && !g.parkingBasement) return 0;
+    const perimeter = 4 * Math.sqrt(getFootprint(g));
+    const wallFloors = Math.max(basementFloors, g.parkingBasement ? 1 : 0);
+    return perimeter * getStoreyHeight(g) * wallFloors;
   }
 
   function getFoundationBasementExtra(g){
@@ -3333,8 +3852,9 @@
     return ft === 'plade' || ft === '';
   }
 
-  function computeCategoryEstimate(key, g){
-    const typeDef = TYPE_DEFAULTS[g.buildingType] || TYPE_DEFAULTS.parcelhus;
+  function computeCategoryEstimate(key, g, opts){
+    opts = opts || {};
+    const typeDef = typeDefOf(g);
     const fSplit = floorsSplit(g);
     const rowMatId = standardRows[key] && standardRows[key].materialId;
     if(rowMatId && isNoneMaterial(rowMatId)){
@@ -3342,8 +3862,10 @@
     }
 
     if(key === 'fundament'){
-      const matId = standardRows.fundament.materialId;
-      const basementExtra = getFoundationBasementExtra(g);
+      const matId = opts.matIdOverride || standardRows.fundament.materialId;
+      // noBasementExtra: kaldt fra Fundament-rækkens 'fundering'-lag, hvor
+      // kældervæggene er sit EGET lag med sit eget preset — ellers dobbelttælling.
+      const basementExtra = opts.noBasementExtra ? 0 : getFoundationBasementExtra(g);
       const footprint = getFootprint(g);
       const ft = g.foundationType;
       const hasLength = g.foundationLength !== '' && !isNaN(parseFloat(g.foundationLength));
@@ -4909,12 +5431,13 @@
 
   document.getElementById('buildingType').addEventListener('change', () => {
     const newType = document.getElementById('buildingType').value;
-    const defaults = defaultMaterialForCategory(newType);
+    const newWeight = document.getElementById('constructionWeight').value;
+    const defaults = defaultMaterialForCategory(newType, newWeight);
     CATEGORY_META.forEach(meta => {
       if(standardRows[meta.key].mode === 'auto'){
         standardRows[meta.key].materialId = defaults[meta.key];
         if(LAYERED_CONFIG[meta.key]){
-          standardRows[meta.key].layerMaterials = defaultLayerMaterials(meta.key, newType);
+          standardRows[meta.key].layerMaterials = defaultLayerMaterials(meta.key, newType, newWeight);
           standardRows[meta.key].deferredLayerMaterials = null;
           standardRows[meta.key].deferredBearingMaterial = null;
         }
@@ -4934,6 +5457,54 @@
     syncIndervaeggeForPrinciple(g, { restoreDefaultsIfIntet: true });
     renderWorksheet();
   });
+
+  document.getElementById('constructionWeight').addEventListener('change', () => {
+    const w = document.getElementById('constructionWeight').value;
+    const type = document.getElementById('buildingType').value;
+    const defaults = defaultMaterialForCategory(type, w);
+    CATEGORY_META.forEach(meta => {
+      if(standardRows[meta.key].mode === 'auto'){
+        standardRows[meta.key].materialId = defaults[meta.key];
+        if(LAYERED_CONFIG[meta.key]){
+          standardRows[meta.key].layerMaterials = defaultLayerMaterials(meta.key, type, w);
+          standardRows[meta.key].deferredLayerMaterials = null;
+          standardRows[meta.key].deferredBearingMaterial = null;
+        }
+      }
+    });
+    const gW = readGeometry();
+    syncEtagedaekForFloorCount(gW, { restoreDefaultsIfIntet: true });
+    syncIndervaeggeForPrinciple(gW, { restoreDefaultsIfIntet: true });
+    updateWeightBadge();
+    renderWorksheet();
+  });
+
+  function updateWeightBadge(){
+    const w = document.getElementById('constructionWeight').value;
+    const type = document.getElementById('buildingType').value;
+    const badge = document.getElementById('weightBadge');
+    const hint = document.getElementById('weightHint');
+    if(!badge || !hint) return;
+    if(w !== 'let'){
+      badge.textContent = 'Standard';
+      badge.className = 'level-badge empty';
+      hint.textContent = 'Tunge referencer (beton/stål/tegl) — værktøjets primære kalibreringsgrundlag.';
+      return;
+    }
+    const basis = LIGHT_BASIS[type];
+    if(!basis){
+      badge.textContent = 'Ikke tilgængelig';
+      badge.className = 'level-badge empty';
+      hint.textContent = 'Der findes ingen let variant for denne bygningstype — de tunge standardværdier bruges fortsat.';
+      return;
+    }
+    const weak = basis.indexOf('afledt') === 0;
+    badge.textContent = weak ? 'Afledt' : 'Kalibreret';
+    badge.className = 'level-badge ' + (weak ? 'empty' : 'ok');
+    hint.textContent = 'Datagrundlag: ' + basis + '.' + (weak
+      ? ' Skaleret ud fra de målte forhold for etage/kontor — behandl som størrelsesorden, ikke facit.'
+      : '');
+  }
 
   document.getElementById('constructionPrinciple').addEventListener('change', () => {
     constructionPrincipleTouched = true;
@@ -4963,6 +5534,7 @@
       projectName: document.getElementById('projectName').value,
       buildingType: document.getElementById('buildingType').value,
       constructionPrinciple: document.getElementById('constructionPrinciple').value,
+      constructionWeight: document.getElementById('constructionWeight').value,
       heatedArea: document.getElementById('heatedArea').value,
       floors: document.getElementById('floors').value,
       floorsAboveGrade: document.getElementById('floorsAboveGrade').value,
@@ -5025,6 +5597,8 @@
     document.getElementById('projectName').value = state.projectName || '';
     document.getElementById('buildingType').value = state.buildingType || 'parcelhus';
     document.getElementById('constructionPrinciple').value = state.constructionPrinciple || '';
+    document.getElementById('constructionWeight').value = state.constructionWeight || '';
+    if(typeof updateWeightBadge === 'function') updateWeightBadge();
     if(state.constructionPrinciple){ constructionPrincipleTouched = true; }
     document.getElementById('heatedArea').value = state.heatedArea || 150;
     document.getElementById('floors').value = state.floors || 1;
@@ -5214,6 +5788,7 @@
     document.getElementById('roofType').value = ROOF_TYPE_BY_TYPE.parcelhus;
     document.getElementById('roofAreaOverride').value = '';
     document.getElementById('constructionPrinciple').value = 'vaeg';
+    document.getElementById('constructionWeight').value = '';
     constructionPrincipleTouched = false;
     roofTypeTouched = false;
 
@@ -5724,6 +6299,7 @@ Hvis du ikke kan finde et klart A1-A3 GWP-tal, sæt gwp_a1a3_per_unit til null o
         location: 'DK',
         building_type: g.buildingType,
         construction_principle: g.constructionPrinciple || null,
+        construction_weight: g.constructionWeight || null,
         heated_floor_area_m2: g.heatedArea,
         floors_total: g.floorsTotal,
         floors_above_grade: g.floorsAboveGrade || null,
@@ -5798,6 +6374,7 @@ Hvis du ikke kan finde et klart A1-A3 GWP-tal, sæt gwp_a1a3_per_unit til null o
           document.getElementById('projectName').value = data.project.name || '';
           if(data.project.building_type) document.getElementById('buildingType').value = data.project.building_type;
           document.getElementById('constructionPrinciple').value = data.project.construction_principle || '';
+          document.getElementById('constructionWeight').value = data.project.construction_weight || '';
           if(data.project.heated_floor_area_m2) document.getElementById('heatedArea').value = data.project.heated_floor_area_m2;
           if(data.project.floors_total) document.getElementById('floors').value = data.project.floors_total;
           document.getElementById('floorsAboveGrade').value = data.project.floors_above_grade || '';
@@ -5897,6 +6474,7 @@ Hvis du ikke kan finde et klart A1-A3 GWP-tal, sæt gwp_a1a3_per_unit til null o
 
   const versionEl = document.getElementById('appVersion');
   if(versionEl) versionEl.textContent = 'v' + APP_VERSION;
+  updateWeightBadge();
 
   document.addEventListener('keydown', (e) => {
     if(!(e.metaKey || e.ctrlKey) || e.shiftKey || e.altKey) return;
