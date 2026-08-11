@@ -951,6 +951,34 @@
     <details class="notes-details">
       <summary>Metode, kalibrering og fuld ændringslog</summary>
       <div class="notes-details-body">
+        <strong>v0.21.7 — Etage-uoverensstemmelsen kunne aldrig lukkes (fejl).</strong>
+        Når "Over jord" stod tomt, faldt koden tilbage til <code>g.floorsTotal</code> — altså
+        SAMME tal som "Etager i alt", uden at trække kælderetagerne fra. Med 6 etager i alt og
+        1 under jord blev over jord udledt til 6, sum = 7 ≠ 6, og advarslen udløstes. Trykkede man
+        "Opdatér til 7", blev totalen 7, hvorefter over jord (stadig tomt) blev udledt til 7 →
+        sum 8 ≠ 7, og advarslen kom igen med et nyt tal. Målt forløb før rettelsen: 6 → 7 → 8 → 9,
+        én etage mere for hvert klik, i det uendelige.
+        <br><br>
+        Korrekt udledning er RESTEN: <code>etager i alt − under jord</code>. Fejlen stod
+        <strong>otte steder</strong> i koden (facadeareal, etagehøjde, dækberegning, placeholder
+        m.fl.), fordi udtrykket var kopieret rundt. Alle otte er nu erstattet af én fælles
+        <code>getFloorsAboveGrade(g)</code>, så samme fejl ikke kan opstå igen ved næste kopiering.
+        <br><br>
+        <strong>Verificeret i browseren:</strong> 6 etager + 1 under jord giver nu ingen advarsel
+        og placeholder 5 (var 6). En RIGTIG uoverensstemmelse fanges stadig — 6 i alt, 4 over,
+        1 under advarer korrekt og retter til 5 ved ét klik. Bygninger uden kælder og
+        P-kælder-fluebenet er upåvirkede. Standardtal uændrede.
+        <br><br>
+        <strong>v0.21.6 — Indervægge flyttet op under Ydervægge (kosmetisk).</strong>
+        Rækkefølgen i <code>CATEGORY_META</code> er ændret, så de to vægkategorier står ved siden
+        af hinanden: Fundament · Terrændæk · Bærende konstruktion · Etagedæk · <strong>Ydervægge ·
+        Indervægge</strong> · Altaner · Tag · Vinduer &amp; døre · Gulvbelægning · Installationer ·
+        Elevator. Indervægge lå tidligere efter Vinduer &amp; døre. Rækkefølgen slår igennem alle
+        steder, der itererer over <code>CATEGORY_META</code> — arbejdsarket, fase-diagrammet pr.
+        bygningsdel, PDF-udskriften og LCAx-eksporten. Verificeret at ingen kode slår kategorier op
+        på indeks (kun på <code>key</code>), så gemte sessioner og eksisterende LCAx-filer indlæses
+        uændret. Ingen ændring i tal: 6,8 · 4,4 · 9,9 · 13,6 · 12,1.
+        <br><br>
         <strong>v0.21.5 — Bundmargin i Resultat-panelet rettet (kosmetisk).</strong>
         <code>.phase-chart-onscreen</code> — den nederste sektion i Resultat-panelet, som rummer
         de to fase-diagrammer — havde <code>padding-bottom: 4px</code>, så rammen sluttede tæt
@@ -1469,7 +1497,7 @@
 <script>
 (function(){
 
-  const APP_VERSION = '0.21.5';
+  const APP_VERSION = '0.21.7';
 
   // ================= CONSTANTS & PLACEHOLDER DATA =================
   // All numeric coefficients below are illustrative order-of-magnitude
@@ -2784,10 +2812,10 @@
     { key:'baerende',             label:'Bærende konstruktion',      unit:'kg' },
     { key:'etagedaek',            label:'Etagedæk',                  unit:'kg' },
     { key:'facade-beklaedning',   label:'Ydervægge',                 unit:'kg' },
+    { key:'indvendigt',           label:'Indervægge',                unit:'kg' },
     { key:'altaner',              label:'Altaner',                   unit:'kg' },
     { key:'tag',                  label:'Tag',                       unit:'kg' },
     { key:'vinduer',              label:'Vinduer & døre',            unit:'kg' },
-    { key:'indvendigt',           label:'Indervægge',                unit:'kg' },
     { key:'gulvbelaegning',       label:'Gulvbelægning',             unit:'kg' },
     { key:'installationer',       label:'Installationer (vent./vand/varme/el-mekanisk)', unit:'kg' },
     { key:'elevator',              label:'Elevator + skakt (+ solceller)', unit:'kg' },
@@ -3424,7 +3452,7 @@
   }
 
   function getDeckFloorCount(g){
-    const floorsAbove = g.floorsAboveGrade !== '' ? parseFloat(g.floorsAboveGrade) : g.floorsTotal;
+    const floorsAbove = getFloorsAboveGrade(g);
     const aboveDecks = Math.max(floorsAbove - 1, 0);
     const parkingDeck = g.parkingBasement ? P_KAELDER_DECK_DENSITY_FACTOR : 0;
     return aboveDecks + parkingDeck;
@@ -3432,7 +3460,7 @@
 
   // Loft-lag: kun mellemdæk over jord (P-loft er typisk rå beton/brand, ikke finish).
   function getLoftFloorCount(g){
-    const floorsAbove = g.floorsAboveGrade !== '' ? parseFloat(g.floorsAboveGrade) : g.floorsTotal;
+    const floorsAbove = getFloorsAboveGrade(g);
     return Math.max(floorsAbove - 1, 0);
   }
 
@@ -3725,6 +3753,21 @@
     return g.parkingBasement ? 1 : 0;
   }
 
+  // RETTET v0.21.7. Etager over jord når feltet er tomt.
+  // Feltet faldt otte steder i koden tilbage til g.floorsTotal — altså SAMME
+  // tal som "Etager i alt", uden at trække kælderetagerne fra. Med 6 etager i
+  // alt og 1 under jord gav det over=6, below=1, sum=7 ≠ 6, hvilket udløste
+  // uoverensstemmelses-advarslen. Trykkede man "Opdatér til 7", blev totalen 7,
+  // men over jord (stadig tomt) blev så udledt som 7 → sum 8 ≠ 7, og advarslen
+  // kom igen med et nyt tal. Man kunne aldrig indhente den; totalen voksede med
+  // én for hvert klik. Korrekt udledning er RESTEN: total − under jord.
+  function getFloorsAboveGrade(g){
+    if(g.floorsAboveGrade !== '' && !isNaN(parseFloat(g.floorsAboveGrade))){
+      return parseFloat(g.floorsAboveGrade);
+    }
+    return Math.max(g.floorsTotal - getBasementFloorCount(g), 0);
+  }
+
   // Etagehøjde — bruges til at udlede facadehøjde af etageantal, når hverken
   // facadeareal eller længde×højde er angivet direkte. Tidligere en skjult,
   // fast konstant (DEFAULT_STOREY_HEIGHT=3); nu et valgfrit felt, så
@@ -3736,7 +3779,7 @@
   }
 
   function getFootprint(g){
-    const floorsAbove = g.floorsAboveGrade !== '' ? parseFloat(g.floorsAboveGrade) : g.floorsTotal;
+    const floorsAbove = getFloorsAboveGrade(g);
     return Math.max(g.heatedArea / Math.max(floorsAbove, 1), 1);
   }
 
@@ -3750,7 +3793,7 @@
     }
     const footprint = getFootprint(g);
     const perimeter = 4 * Math.sqrt(footprint);
-    const floorsAbove = g.floorsAboveGrade !== '' ? parseFloat(g.floorsAboveGrade) : g.floorsTotal;
+    const floorsAbove = getFloorsAboveGrade(g);
     const height = floorsAbove * getStoreyHeight(g);
     return { area: perimeter * height, refined:false };
   }
@@ -4011,7 +4054,7 @@
       return { qty: g.heatedArea * density, geomQty: g.heatedArea, geomUnit: 'm²', refined:false };
     }
     if(key === 'elevator'){
-      const floorsAbove = g.floorsAboveGrade !== '' ? parseFloat(g.floorsAboveGrade) : g.floorsTotal;
+      const floorsAbove = getFloorsAboveGrade(g);
       const elevMatId = standardRows.elevator && standardRows.elevator.materialId;
       if(isNoneMaterial(elevMatId)){
         return { qty: 0, refined: fSplit };
@@ -4403,7 +4446,7 @@
       return;
     }
 
-    const above = g.floorsAboveGrade !== '' ? parseFloat(g.floorsAboveGrade) : g.floorsTotal;
+    const above = getFloorsAboveGrade(g);
     const below = g.floorsBelowGrade !== '' ? parseFloat(g.floorsBelowGrade) : 0;
     const sum = above + below;
 
@@ -4522,9 +4565,9 @@
     const g = readGeometry();
     const footprint = getFootprint(g);
     const perimeterDefault = 4 * Math.sqrt(footprint);
-    const floorsAboveForHeight = g.floorsAboveGrade !== '' ? parseFloat(g.floorsAboveGrade) : g.floorsTotal;
+    const floorsAboveForHeight = getFloorsAboveGrade(g);
 
-    document.getElementById('floorsAboveGrade').placeholder = String(Math.round(g.floorsTotal));
+    document.getElementById('floorsAboveGrade').placeholder = String(Math.round(getFloorsAboveGrade(g)));
     document.getElementById('floorsBelowGrade').placeholder = '0';
     document.getElementById('facadeAreaOverride').placeholder = String(Math.round(getFacadeArea(g).area));
     document.getElementById('facadeLength').placeholder = String(Math.round(perimeterDefault));
